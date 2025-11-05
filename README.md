@@ -18,7 +18,103 @@
 - **상태 관리**: React Context API
 - **그래프**: react-native-svg
 
-## 설치 및 실행
+## 🚀 처음부터 시작하기 (초보자 가이드)
+
+### 필요한 준비물
+
+1. **Node.js 설치** (버전 18 이상 권장)
+   - [Node.js 공식 사이트](https://nodejs.org/)에서 다운로드 및 설치
+   - 설치 확인: 터미널에서 `node --version` 입력
+
+2. **Git 설치** (이미 설치되어 있을 수 있음)
+   - [Git 공식 사이트](https://git-scm.com/)에서 다운로드 및 설치
+   - 설치 확인: 터미널에서 `git --version` 입력
+
+3. **Expo Go 앱 설치** (스마트폰에 설치)
+   - **Android**: [Google Play Store](https://play.google.com/store/apps/details?id=host.exp.exponent)에서 설치
+   - **iOS**: [App Store](https://apps.apple.com/app/expo-go/id982107779)에서 설치
+
+### 단계별 실행 방법
+
+#### 1단계: GitHub에서 코드 다운로드
+
+```bash
+# 저장소 클론
+git clone https://github.com/skychoi1027/-1.git
+
+# 프로젝트 폴더로 이동
+cd -1
+```
+
+또는 GitHub에서 ZIP 파일을 다운로드하여 압축 해제한 후 폴더로 이동
+
+#### 2단계: 의존성 설치
+
+```bash
+# npm 패키지 설치 (5-10분 정도 소요)
+npm install
+```
+
+> ⚠️ **주의**: `npm install`이 완료될 때까지 기다려주세요. 에러가 발생하면 `npm install --legacy-peer-deps`를 시도해보세요.
+
+#### 3단계: 개발 서버 시작
+
+```bash
+# Expo 개발 서버 시작
+npm start
+```
+
+터미널에 QR 코드가 표시됩니다!
+
+#### 4단계: Expo Go로 앱 실행
+
+**Android:**
+1. Expo Go 앱 실행
+2. "Scan QR code" 클릭
+3. 터미널에 표시된 QR 코드 스캔
+4. 앱이 자동으로 로드됩니다
+
+**iOS:**
+1. Expo Go 앱 실행
+2. 카메라 앱으로 QR 코드 스캔 (또는 Expo Go 앱 내에서 스캔)
+3. "Open in Expo Go" 클릭
+4. 앱이 자동으로 로드됩니다
+
+**웹에서 실행:**
+```bash
+# 터미널에서 'w' 키를 누르거나
+npm run web
+```
+
+### 📱 Expo Go로 실행할 때 주의사항
+
+- **같은 Wi-Fi 네트워크**: 컴퓨터와 스마트폰이 같은 Wi-Fi에 연결되어 있어야 합니다
+- **방화벽**: 방화벽이 Expo 서버를 차단하지 않는지 확인하세요
+- **터널 모드**: 같은 Wi-Fi가 아닌 경우, 터미널에서 `Shift + t`를 눌러 터널 모드를 활성화하세요 (더 느릴 수 있음)
+
+### 🐛 문제 해결
+
+**의존성 설치 오류:**
+```bash
+# 캐시 삭제 후 재설치
+npm cache clean --force
+rm -rf node_modules package-lock.json
+npm install
+```
+
+**Expo Go에서 연결 안 됨:**
+```bash
+# 터널 모드로 실행
+npm start -- --tunnel
+```
+
+**포트 충돌:**
+```bash
+# 다른 포트 사용
+npx expo start --port 8082
+```
+
+## 설치 및 실행 (기존 사용자)
 
 ### 1. 의존성 설치
 

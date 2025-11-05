@@ -279,6 +279,303 @@ SajuMonooApp/
 - [AI_SETUP.md](./AI_SETUP.md) - AI 조언 기능 설정 가이드
 - [BACKEND_API_GUIDE.md](./BACKEND_API_GUIDE.md) - 백엔드 API 연동 가이드
 - [AI_ROLE_EXPLANATION.md](./AI_ROLE_EXPLANATION.md) - AI API 역할 설명
+- [BACKEND_EXPLANATION.md](./BACKEND_EXPLANATION.md) - 백엔드 서버 상세 설명
+
+## 상세 설계
+
+### 백엔드 서버의 역할 및 데이터베이스 연동 계획
+
+현재 백엔드 서버는 Node.js와 Express를 기반으로 `backend/server.js` 파일에 구현되어 있습니다. 이 서버는 프론트엔드(앱/웹)와 외부 서비스(예: OpenAI) 사이의 중간 다리 역할을 합니다.
+
+#### 주요 역할
+
+1. **API 키 보호**: 프론트엔드에서 OpenAI API 키를 직접 사용하면 보안에 취약하므로, 백엔드 서버가 API 키를 안전하게 관리하고 OpenAI API 호출을 대리합니다.
+   ```
+   프론트엔드 → 백엔드 서버 → OpenAI API
+   (키 없음)    (키 보관)      (키 사용)
+   ```
+
+2. **AI 조언 생성 (`POST /api/ai-advice`)**: 프론트엔드에서 궁합 결과를 받아서 OpenAI API에 전달하고, AI가 생성한 조언을 받아 프론트엔드로 반환합니다.
+
+3. **사용자 인증 및 정보 관리**: 회원가입, 로그인, 사용자 프로필 관리 등의 기능을 담당합니다.
+
+#### 데이터베이스 연동 계획
+
+현재 백엔드 서버에는 사용자 인증 및 프로필 정보를 저장하는 실제 데이터베이스가 연결되어 있지 않습니다. 향후 다음과 같은 목적으로 데이터베이스를 연동할 예정입니다:
+
+- **회원가입 정보 저장**: 사용자 계정(이메일, 비밀번호 등) 정보를 안전하게 저장
+- **사용자 프로필 저장**: 사용자의 이름, 생년월일, 생시, 성별 등 개인 프로필 정보 저장
+- **궁합 분석 결과 저장 (선택 사항)**: 사용자가 조회한 궁합 결과를 저장하여 재조회 및 통계 분석에 활용
+
+**예상 기술 스택**: MongoDB (NoSQL) 또는 PostgreSQL (SQL)
+
+**데이터베이스 스키마 예시**:
+```javascript
+// User Schema (MongoDB 예시)
+{
+  _id: ObjectId,
+  email: String (unique, required),
+  password: String (hashed, required),
+  name: String,
+  profile: {
+    name: String,
+    birthDate: String (YYYY-MM-DD),
+    birthTime: String (HH:MM),
+    gender: String ("남" | "여")
+  },
+  createdAt: Date,
+  updatedAt: Date
+}
+
+// CompatibilityResult Schema (선택 사항)
+{
+  _id: ObjectId,
+  userId: ObjectId (reference to User),
+  user1: { name, birthDate, birthTime, gender },
+  user2: { name, birthDate, birthTime, gender },
+  score: Number,
+  salAnalysis: Array,
+  createdAt: Date
+}
+```
+
+---
+
+### 프론트엔드 상세 설계 (Class Diagram)
+
+프론트엔드는 Expo/React Native를 사용하여 웹 및 모바일 환경에서 동작하는 UI를 제공합니다.
+
+#### 프론트엔드 컴포넌트 구조
+
+```
+                            ┌─────────────────────────┐
+                            │  RootLayout             │
+                            │  app/_layout.tsx        │
+                            └──────────┬──────────────┘
+                                       │
+                ┌──────────────────────┼──────────────────────┐
+                │                      │                      │
+        ┌───────▼────────┐    ┌────────▼────────┐    ┌────────▼────────┐
+        │ AuthContext    │    │ UserDataContext │    │ Tab Navigation  │
+        │                │    │                 │    │                 │
+        │ + user         │    │ + user1         │    │                 │
+        │ + login()      │    │ + user2         │    │                 │
+        │ + logout()     │    │ + setUser1()    │    │                 │
+        │ + updateProfile│    │ + setUser2()    │    │                 │
+        └────────────────┘    │ + compatibility │    │                 │
+                              │   Result        │    │                 │
+                              └─────────────────┘    └────────┬────────┘
+                                                              │
+                    ┌─────────────────────────────────────────┼─────────────┐
+                    │                                         │             │
+          ┌─────────▼────────┐                    ┌──────────▼────────┐   │
+          │ Home             │                    │ Input             │   │
+          │ app/(tabs)/index │                    │ app/input.tsx     │   │
+          │                  │                    │                   │   │
+          │ - 궁합문어 로고   │                    │ - localUser1      │   │
+          │ - 살 설명 섹션    │                    │ - localUser2      │   │
+          │ - 입력 버튼       │                    │ - handleSubmit()  │   │
+          └──────────────────┘                    └──────────┬────────┘   │
+                                                              │             │
+                                                              │             │
+          ┌───────────────────────────────────────────────────┼─────────────┤
+          │                                                   │             │
+  ┌───────▼────────┐                              ┌──────────▼────────┐   │
+  │ Loading        │                              │ Result            │   │
+  │ app/loading.tsx│                              │ app/result.tsx    │   │
+  │                │                              │                   │   │
+  │ - calculate()  │                              │ - score           │   │
+  └────────────────┘                              │ - explanation     │   │
+          │                                       │ - salData         │   │
+          │                                       │ - OctagonGraph    │   │
+          │                                       └──────────┬─────────┘   │
+          │                                                  │             │
+          │                                                  │             │
+  ┌───────▼────────┐                              ┌──────────▼────────┐   │
+  │ Result         │                              │ AIAdvice          │   │
+  │ app/result.tsx │                              │ app/ai-advice.tsx │   │
+  │                │                              │                   │   │
+  │ - score        │                              │ - advice          │   │
+  │ - sajuInfo     │                              │ - tips            │   │
+  │ - OctagonGraph │                              │ - summary         │   │
+  └────────────────┘                              └───────────────────┘   │
+                                                                             │
+                                                                             │
+  ┌─────────────────────────────────────────────────────────────────────────┤
+  │                                                                         │
+  │  ┌────────────────┐  ┌────────────────┐  ┌────────────────┐          │
+  │  │ AppHeader      │  │ OctagonGraph   │  │ DatePicker     │          │
+  │  │ components/    │  │ components/    │  │ components/    │          │
+  │  │                │  │                │  │                │          │
+  │  │ - title        │  │ - salData      │  │ - value        │          │
+  │  │ - showHomeBtn  │  │ - renderGraph()│  │ - onChange()    │          │
+  │  │ - showAuthBtn  │  └────────────────┘  └────────────────┘          │
+  │  └────────────────┘                                                  │
+  │                                                                       │
+  │  ┌────────────────┐  ┌────────────────┐                            │
+  │  │ ThemedText     │  │ ThemedView     │                            │
+  │  │ components/    │  │ components/    │                            │
+  │  │                │  │                │                            │
+  │  │ - type         │  │ - style        │                            │
+  │  │ - style        │  └────────────────┘                            │
+  │  └────────────────┘                                                │
+  │                                                                     │
+  │  ┌────────────────────────────────────────────────────────────┐   │
+  │  │ Utils                                                       │   │
+  │  │                                                             │   │
+  │  │  apiClient.ts                                               │   │
+  │  │    ├─ apiRequest()                                          │   │
+  │  │    ├─ authAPI { login, signup, getProfile, updateProfile } │   │
+  │  │    └─ aiAPI { getAdvice }                                   │   │
+  │  │                                                             │   │
+  │  │  sajuCalculator.ts                                          │   │
+  │  │    ├─ calculateSaju()                                       │   │
+  │  │    ├─ analyzeSal()                                         │   │
+  │  │    └─ calculateCompatibility()                             │   │
+  │  │                                                             │   │
+  │  │  aiService.ts                                               │   │
+  │  │    └─ getAIAdvice()                                        │   │
+  │  └────────────────────────────────────────────────────────────┘   │
+  └─────────────────────────────────────────────────────────────────┘
+```
+
+#### 주요 컴포넌트 설명
+
+**Context (전역 상태 관리)**
+- `AuthContext`: 사용자 인증 상태, 로그인/로그아웃, 프로필 관리
+- `UserDataContext`: 사용자 입력 데이터(이름, 생년월일 등), 궁합 결과 저장
+
+**화면 컴포넌트**
+- `Home`: 앱 메인 화면, 궁합문어 로고, 살 설명, 입력 버튼
+- `Input`: 사용자 사주 정보 입력 폼
+- `Loading`: 사주 계산 중 로딩 화면
+- `Result`: 궁합 분석 결과 표시, 점수, 그래프, AI 조언 버튼
+- `AIAdvice`: AI 조언 표시 화면
+- `Login/Signup`: 로그인/회원가입 화면
+- `Profile`: 내 정보 관리 화면
+
+**UI 컴포넌트**
+- `AppHeader`: 상단 헤더, 로고, 인증 버튼
+- `OctagonGraph`: 팔각형 방사형 그래프 (8개 살 시각화)
+- `DatePicker/TimePicker`: 날짜/시간 선택 컴포넌트
+- `ThemedText/ThemedView`: 테마 적용 컴포넌트
+
+**유틸리티**
+- `apiClient`: 백엔드 API 호출, 인증 토큰 관리
+- `sajuCalculator`: 사주 계산 로직 (간지 변환, 살 분석, 점수 계산)
+- `aiService`: AI 조언 요청 로직
+
+---
+
+### 백엔드 상세 설계 (Class Diagram)
+
+백엔드는 Node.js와 Express를 사용하여 RESTful API를 제공합니다.
+
+#### 백엔드 서버 구조
+
+```
+                    ┌─────────────────────────────────────┐
+                    │  Express Server                     │
+                    │  backend/server.js                  │
+                    │  Port: 3000                        │
+                    └────────────┬────────────────────────┘
+                                  │
+                    ┌─────────────┴─────────────┐
+                    │                           │
+        ┌───────────▼──────────┐    ┌───────────▼──────────┐
+        │  Middleware          │    │  Routes              │
+        │                      │    │                      │
+        │  - cors()            │    │  GET  /              │
+        │  - express.json()    │    │       └─ 상태 확인    │
+        └──────────────────────┘    │                      │
+                                     │  POST /api/ai-advice │
+                                     │       ├─ 입력 검증    │
+                                     │       ├─ OpenAI 호출 │
+                                     │       └─ 응답 반환    │
+                                     │                      │
+                                     │  POST /api/auth/login │
+                                     │       ├─ 인증 처리    │
+                                     │       ├─ DB 조회(예정)│
+                                     │       └─ 토큰 발급    │
+                                     │                      │
+                                     │  POST /api/auth/signup│
+                                     │       ├─ 회원가입     │
+                                     │       ├─ DB 저장(예정)│
+                                     │       └─ 토큰 발급    │
+                                     │                      │
+                                     │  GET  /api/auth/profile│
+                                     │       ├─ 토큰 검증     │
+                                     │       ├─ DB 조회(예정)│
+                                     │       └─ 프로필 반환  │
+                                     │                      │
+                                     │  PUT  /api/auth/profile│
+                                     │       ├─ 토큰 검증     │
+                                     │       ├─ DB 업데이트(예정)│
+                                     │       └─ 프로필 반환  │
+                                     └───────────┬──────────┘
+                                                 │
+                    ┌───────────────────────────┼───────────────────────────┐
+                    │                           │                           │
+        ┌───────────▼──────────┐    ┌───────────▼──────────┐    ┌───────────▼──────────┐
+        │  Helper Functions    │    │  OpenAI Service      │    │  Database (예정)     │
+        │                      │    │                      │    │                      │
+        │  - generatePrompt()   │    │  - apiKey (환경변수)  │    │  User Model          │
+        │  - parseAIResponse()  │    │  - chat.completions  │    │    - _id             │
+        │  - getDefaultAdvice() │    │    .create()         │    │    - email (unique)  │
+        │  - getDefaultTips()   │    │  - model: gpt-3.5    │    │    - password (hash) │
+        └──────────────────────┘    └──────────────────────┘    │    - name             │
+                                                                │    - profile {        │
+                                                                │        name          │
+                                                                │        birthDate     │
+                                                                │        birthTime     │
+                                                                │        gender        │
+                                                                │      }               │
+                                                                │    - createdAt       │
+                                                                │    - updatedAt       │
+                                                                │                      │
+                                                                │  CompatibilityResult│
+                                                                │    - _id             │
+                                                                │    - userId (ref)    │
+                                                                │    - user1, user2    │
+                                                                │    - score           │
+                                                                │    - salAnalysis     │
+                                                                │    - createdAt       │
+                                                                └──────────────────────┘
+                    │
+        ┌───────────▼──────────┐
+        │  Environment Vars   │
+        │                      │
+        │  - PORT              │
+        │  - OPENAI_API_KEY    │
+        │  - DATABASE_URL (예정)│
+        │  - JWT_SECRET (예정) │
+        └──────────────────────┘
+```
+
+#### 주요 모듈 설명
+
+**Express Application**
+- 미들웨어: CORS 설정, JSON 파싱
+- 라우트: API 엔드포인트 정의
+- 서버 포트: 3000 (기본값)
+
+**API 엔드포인트**
+- `GET /`: 서버 상태 확인
+- `POST /api/ai-advice`: AI 조언 생성
+- `POST /api/auth/login`: 사용자 로그인
+- `POST /api/auth/signup`: 사용자 회원가입
+- `GET /api/auth/profile`: 프로필 조회
+- `PUT /api/auth/profile`: 프로필 업데이트
+
+**외부 서비스**
+- OpenAI Service: OpenAI API와 통신 (API 키 보관)
+- Database (향후 구현): MongoDB/PostgreSQL 연동 예정
+
+**데이터베이스 스키마 (향후 구현)**
+- User Model: 사용자 계정 및 프로필 정보
+- CompatibilityResult Model (선택): 궁합 결과 히스토리
+
+---
 
 ## 라이선스
 

@@ -4,7 +4,11 @@
  * - 사용자 정보 저장
  * - 로그인/로그아웃 기능
  */
+import { authAPI } from '@/utils/apiClient';
 import React, { createContext, ReactNode, useContext, useState } from 'react';
+
+// 백엔드 API 사용 여부 확인
+const USE_BACKEND_API = process.env.EXPO_PUBLIC_USE_BACKEND_API === 'true';
 
 /**
  * 사용자 정보 타입
@@ -44,43 +48,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   /**
    * 로그인 함수
-   * TODO: 실제 백엔드 API와 연동
+   * - 백엔드 API 사용 시: 실제 서버와 통신
+   * - 백엔드 미사용 시: 로컬 스토리지 기반 임시 로그인
    */
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      // TODO: 실제 백엔드 API 호출
-      // const response = await fetch(`${API_URL}/auth/login`, {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ email, password }),
-      // });
-      // const data = await response.json();
-      // if (data.success) {
-      //   setUser(data.user);
-      //   return true;
-      // }
-
-      // 임시: 로그인 성공 처리 (실제로는 API 응답으로 처리)
-      // 로컬 스토리지에서 프로필 정보 확인 (웹만 지원, 모바일은 AsyncStorage 사용 필요)
-      let profile = null;
-      try {
-        if (typeof window !== 'undefined' && window.localStorage) {
-          const savedProfile = window.localStorage.getItem('userProfile');
-          profile = savedProfile ? JSON.parse(savedProfile) : null;
+      if (USE_BACKEND_API) {
+        // 백엔드 API 호출
+        const response = await authAPI.login(email, password);
+        
+        if (response.success && response.user) {
+          setUser({
+            id: response.user.id || email,
+            email: response.user.email || email,
+            name: response.user.name,
+            profile: response.user.profile,
+          });
+          return true;
+        } else {
+          console.error('로그인 실패:', response.message);
+          return false;
         }
-      } catch (e) {
-        // localStorage가 없는 경우 (모바일) 무시
-        console.log('localStorage not available');
+      } else {
+        // 임시: 로컬 로그인 (백엔드 미사용 시)
+        // 로컬 스토리지에서 프로필 정보 확인
+        let profile = null;
+        try {
+          if (typeof window !== 'undefined' && window.localStorage) {
+            const savedProfile = window.localStorage.getItem('userProfile');
+            profile = savedProfile ? JSON.parse(savedProfile) : null;
+          }
+        } catch (e) {
+          console.log('localStorage not available');
+        }
+
+        setUser({
+          id: email,
+          email,
+          name: profile?.name || email.split('@')[0],
+          profile: profile || undefined,
+        });
+
+        return true;
       }
-
-      setUser({
-        id: email, // 임시 ID
-        email,
-        name: profile?.name || email.split('@')[0],
-        profile: profile || undefined,
-      });
-
-      return true;
     } catch (error) {
       console.error('로그인 실패:', error);
       return false;
@@ -90,35 +100,60 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   /**
    * 로그아웃 함수
    */
-  const logout = () => {
+  const logout = async () => {
+    if (USE_BACKEND_API) {
+      await authAPI.logout();
+    }
     setUser(null);
-    // 로컬 스토리지 정리 (선택적)
-    // localStorage.removeItem('authToken');
+    
+    // 로컬 스토리지 정리
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.removeItem('authToken');
+        window.localStorage.removeItem('userProfile');
+      }
+    } catch (e) {
+      console.log('localStorage not available');
+    }
   };
 
   /**
    * 프로필 업데이트 함수
    */
-  const updateProfile = (profile: AuthUser['profile']) => {
-    if (!user) return;
+  const updateProfile = async (profile: AuthUser['profile']) => {
+    if (!user || !profile) return;
 
-    // 로컬 스토리지에 저장 (임시, 실제로는 백엔드 API 호출)
-    // 웹만 지원, 모바일은 AsyncStorage 사용 필요
-    if (profile) {
-      try {
-        if (typeof window !== 'undefined' && window.localStorage) {
-          window.localStorage.setItem('userProfile', JSON.stringify(profile));
+    try {
+      if (USE_BACKEND_API) {
+        // 백엔드 API 호출
+        const response = await authAPI.updateProfile(profile);
+        
+        if (response.success && response.user) {
+          setUser({
+            ...user,
+            profile: response.user.profile || profile,
+          });
+        } else {
+          console.error('프로필 업데이트 실패');
         }
-      } catch (e) {
-        // localStorage가 없는 경우 (모바일) 무시
-        console.log('localStorage not available');
-      }
-    }
+      } else {
+        // 로컬 스토리지에 저장 (백엔드 미사용 시)
+        try {
+          if (typeof window !== 'undefined' && window.localStorage) {
+            window.localStorage.setItem('userProfile', JSON.stringify(profile));
+          }
+        } catch (e) {
+          console.log('localStorage not available');
+        }
 
-    setUser({
-      ...user,
-      profile,
-    });
+        setUser({
+          ...user,
+          profile,
+        });
+      }
+    } catch (error) {
+      console.error('프로필 업데이트 실패:', error);
+    }
   };
 
   return (

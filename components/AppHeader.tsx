@@ -5,8 +5,10 @@
  * - 웹에서는 스크롤해도 상단에 고정 (sticky)
  * - 홈 화면이 아닐 때 홈 버튼 표시
  * - 현재 페이지 제목 표시 (선택적)
+ * - 로그인 상태에 따라 버튼 표시 변경
  */
 import { Colors } from '@/constants/theme';
+import { useAuth } from '@/contexts/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { usePathname, useRouter } from 'expo-router';
 import { Platform, StyleSheet, TouchableOpacity } from 'react-native';
@@ -25,9 +27,16 @@ export function AppHeader({ title, showHomeButton = true, showAuthButtons = fals
   const pathname = usePathname();
   const colorScheme = useColorScheme();
   const tintColor = Colors[colorScheme ?? 'light'].tint;
+  const { isAuthenticated, logout } = useAuth();
 
   // 현재 화면이 홈 화면인지 확인
   const isHome = pathname === '/(tabs)' || pathname === '/';
+
+  // 로그아웃 처리
+  const handleLogout = () => {
+    logout();
+    router.replace('/(tabs)');
+  };
 
   return (
     <ThemedView style={styles.header}>
@@ -51,37 +60,71 @@ export function AppHeader({ title, showHomeButton = true, showAuthButtons = fals
             {title}
           </ThemedText>
         )}
-        {/* 로그인/회원가입 버튼: 홈 화면이고 showAuthButtons가 true일 때 표시 */}
+        {/* 로그인 상태에 따른 버튼 표시 */}
         {showAuthButtons && isHome && (
           <ThemedView style={styles.authButtonsContainer}>
-            <TouchableOpacity
-              style={[
-                styles.authButton,
-                Platform.select({
-                  web: {
-                    cursor: 'pointer',
-                  },
-                }),
-              ]}
-              onPress={() => router.push('/login')}>
-              <ThemedText style={styles.authButtonText}>로그인</ThemedText>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.authButton,
-                styles.signupButton,
-                { borderColor: tintColor },
-                Platform.select({
-                  web: {
-                    cursor: 'pointer',
-                  },
-                }),
-              ]}
-              onPress={() => router.push('/signup')}>
-              <ThemedText style={[styles.authButtonText, { color: tintColor }]}>
-                회원가입
-              </ThemedText>
-            </TouchableOpacity>
+            {isAuthenticated ? (
+              // 로그인된 경우: 내 정보, 로그아웃 버튼
+              <>
+                <TouchableOpacity
+                  style={[
+                    styles.authButton,
+                    Platform.select({
+                      web: {
+                        cursor: 'pointer',
+                      },
+                    }),
+                  ]}
+                  onPress={() => router.push('/profile')}>
+                  <ThemedText style={styles.authButtonText}>내 정보</ThemedText>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.authButton,
+                    styles.logoutButton,
+                    Platform.select({
+                      web: {
+                        cursor: 'pointer',
+                      },
+                    }),
+                  ]}
+                  onPress={handleLogout}>
+                  <ThemedText style={styles.authButtonText}>로그아웃</ThemedText>
+                </TouchableOpacity>
+              </>
+            ) : (
+              // 로그인 안 된 경우: 로그인, 회원가입 버튼
+              <>
+                <TouchableOpacity
+                  style={[
+                    styles.authButton,
+                    Platform.select({
+                      web: {
+                        cursor: 'pointer',
+                      },
+                    }),
+                  ]}
+                  onPress={() => router.push('/login')}>
+                  <ThemedText style={styles.authButtonText}>로그인</ThemedText>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.authButton,
+                    styles.signupButton,
+                    { borderColor: tintColor },
+                    Platform.select({
+                      web: {
+                        cursor: 'pointer',
+                      },
+                    }),
+                  ]}
+                  onPress={() => router.push('/signup')}>
+                  <ThemedText style={[styles.authButtonText, { color: tintColor }]}>
+                    회원가입
+                  </ThemedText>
+                </TouchableOpacity>
+              </>
+            )}
           </ThemedView>
         )}
       </ThemedView>
@@ -159,6 +202,10 @@ const styles = StyleSheet.create({
   },
   signupButton: {
     backgroundColor: 'transparent',
+  },
+  logoutButton: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#D4C4B0',
   },
   authButtonText: {
     fontSize: 14,

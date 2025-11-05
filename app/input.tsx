@@ -10,11 +10,12 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { TimePicker } from '@/components/TimePicker';
 import { Colors } from '@/constants/theme';
+import { useAuth } from '@/contexts/AuthContext';
 import { useUserData } from '@/contexts/UserDataContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
+import { Alert, Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
 
 export default function InputScreen() {
   const router = useRouter();
@@ -22,10 +23,36 @@ export default function InputScreen() {
   const tintColor = Colors[colorScheme ?? 'light'].tint;
   // 전역 상태에서 사용자 데이터 가져오기
   const { user1, user2, setUser1, setUser2 } = useUserData();
+  // 인증 상태에서 저장된 프로필 정보 가져오기
+  const { user } = useAuth();
 
   // 로컬 상태: 입력 중인 값 관리 (제출 전까지는 로컬에서만 관리)
   const [localUser1, setLocalUser1] = useState(user1);
   const [localUser2, setLocalUser2] = useState(user2);
+
+  /**
+   * 내 정보 불러오기 함수
+   * - 로그인 상태일 경우: 저장된 프로필 정보를 사용자1에 자동 입력
+   * - 로그인 안 된 상태일 경우: 알림 메시지 표시
+   */
+  const handleLoadMyProfile = () => {
+    if (!user || !user.profile) {
+      Alert.alert('알림', '로그인 후 이용 가능합니다.');
+      return;
+    }
+
+    // 저장된 프로필 정보를 사용자1에 입력
+    if (user.profile) {
+      setLocalUser1({
+        name: user.profile.name || '',
+        birthDate: user.profile.birthDate || '',
+        birthTime: user.profile.birthTime || '',
+        gender: user.profile.gender || '',
+      });
+      
+      Alert.alert('완료', '내 정보가 불러와졌습니다.');
+    }
+  };
 
   /**
    * 제출 버튼 클릭 시 실행되는 함수
@@ -65,9 +92,26 @@ export default function InputScreen() {
         <ThemedView style={styles.content}>
           {/* 첫 번째 이용자 */}
           <ThemedView style={styles.userSection}>
-            <ThemedText type="subtitle" style={styles.sectionTitle}>
-              첫 번째 이용자
-            </ThemedText>
+            <ThemedView style={styles.sectionHeader}>
+              <ThemedText type="subtitle" style={styles.sectionTitle}>
+                첫 번째 이용자
+              </ThemedText>
+              <TouchableOpacity
+                style={[
+                  styles.loadProfileButton,
+                  { borderColor: tintColor },
+                  Platform.select({
+                    web: {
+                      cursor: 'pointer',
+                    },
+                  }),
+                ]}
+                onPress={handleLoadMyProfile}>
+                <ThemedText style={[styles.loadProfileButtonText, { color: tintColor }]}>
+                  내 정보 불러오기
+                </ThemedText>
+              </TouchableOpacity>
+            </ThemedView>
             <ThemedView style={styles.inputGroup}>
               <ThemedText style={styles.label}>이름 * (한글만)</ThemedText>
               <TextInput
@@ -274,9 +318,31 @@ const styles = StyleSheet.create({
       },
     }),
   },
-  sectionTitle: {
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 8,
+  },
+  sectionTitle: {
     fontSize: 18,
+    flex: 1,
+  },
+  loadProfileButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    backgroundColor: 'transparent',
+    ...Platform.select({
+      web: {
+        cursor: 'pointer',
+      },
+    }),
+  },
+  loadProfileButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
   },
   inputGroup: {
     gap: 8,

@@ -7,6 +7,7 @@ import { AppHeader } from '@/components/AppHeader';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
+import { useAuth } from '@/contexts/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -16,11 +17,13 @@ export default function LoginScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const tintColor = Colors[colorScheme ?? 'light'].tint;
+  const { login } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     // 입력값 검증
     if (!email || !password) {
       Alert.alert('입력 오류', '이메일과 비밀번호를 모두 입력해주세요.');
@@ -40,16 +43,28 @@ export default function LoginScreen() {
       return;
     }
 
-    // TODO: 실제 로그인 API 호출
-    console.log('로그인 시도:', { email, password });
-    
-    // 임시: 로그인 성공 처리
-    Alert.alert('로그인 성공', '로그인되었습니다.', [
-      {
-        text: '확인',
-        onPress: () => router.back(),
-      },
-    ]);
+    try {
+      setLoading(true);
+      
+      // 로그인 API 호출
+      const success = await login(email, password);
+      
+      if (success) {
+        Alert.alert('로그인 성공', '로그인되었습니다.', [
+          {
+            text: '확인',
+            onPress: () => router.replace('/(tabs)'),
+          },
+        ]);
+      } else {
+        Alert.alert('로그인 실패', '이메일 또는 비밀번호가 올바르지 않습니다.');
+      }
+    } catch (error) {
+      console.error('로그인 오류:', error);
+      Alert.alert('오류', '로그인 중 오류가 발생했습니다.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -116,15 +131,18 @@ export default function LoginScreen() {
             <TouchableOpacity
               style={[
                 styles.loginButton,
-                { backgroundColor: tintColor },
+                { backgroundColor: tintColor, opacity: loading ? 0.6 : 1 },
                 Platform.select({
                   web: {
-                    cursor: 'pointer',
+                    cursor: loading ? 'not-allowed' : 'pointer',
                   },
                 }),
               ]}
-              onPress={handleLogin}>
-              <ThemedText style={styles.loginButtonText}>로그인</ThemedText>
+              onPress={handleLogin}
+              disabled={loading}>
+              <ThemedText style={styles.loginButtonText}>
+                {loading ? '로그인 중...' : '로그인'}
+              </ThemedText>
             </TouchableOpacity>
 
             {/* 회원가입 링크 */}

@@ -100,13 +100,13 @@ classDiagram
     class Input {
         -localUser1: UserData
         -localUser2: UserData
+        +handleLoadMyProfile()
         +handleSubmit()
-        +handleLoadProfile()
     }
     
     class Loading {
         +useEffect()
-        +calculate()
+        -calculate()
     }
     
     class Result {
@@ -123,7 +123,8 @@ classDiagram
         -advice: string
         -tips: array
         -summary: string
-        +getAIAdvice()
+        +useEffect()
+        -fetchAIAdvice()
     }
     
     class AppHeader {
@@ -143,23 +144,27 @@ classDiagram
         +onChange()
     }
     
-    class TimePicker {
-        -value: string
-        +onChange()
-    }
-    
     class apiClient {
         +apiRequest()
         +getAuthToken()
         +setAuthToken()
+        +removeAuthToken()
         +authAPI
         +aiAPI
+        +compatibilityAPI
     }
     
     class sajuCalculator {
         +calculateSaju()
+        -getGanjiYear()
+        -getGanjiMonth()
+        -getGanjiDay()
+        -getGanjiHour()
+        +sajuToNumberArray()
+        -ganToNumber()
+        -jiToNumber()
+        +genderToNumber()
         +calculateCompatibility()
-        -analyzeSal()
     }
     
     class aiService {
@@ -167,20 +172,26 @@ classDiagram
         +getAIAdviceGemini()
     }
     
-    RootLayout --> AuthContext
-    RootLayout --> UserDataContext
-    Home --> Input
-    Input --> Loading
-    Loading --> Result
-    Result --> AIAdvice
-    Result --> AppHeader
-    Result --> OctagonGraph
-    Input --> DatePicker
-    Input --> TimePicker
-    AIAdvice --> apiClient
-    Loading --> sajuCalculator
-    AIAdvice --> aiService
-    apiClient --> aiService
+    class calendarData {
+        +loadCalendarData()
+        +getCalendar()
+        -calendarDataCache: object
+    }
+    
+    RootLayout <-- AuthContext
+    RootLayout <-- UserDataContext
+    Home <-- Input
+    Input <-- Loading
+    Loading <-- Result
+    Result <-- AIAdvice
+    Result <-- AppHeader
+    Result <-- OctagonGraph
+    Input <-- DatePicker
+    AIAdvice <-- apiClient
+    Loading <-- sajuCalculator
+    sajuCalculator <-- apiClient
+    AIAdvice <-- aiService
+    apiClient <-- aiService
             </div>
         </div>
 
@@ -207,6 +218,7 @@ classDiagram
         +POST /api/auth/signup
         +GET /api/auth/profile
         +PUT /api/auth/profile
+        +POST /api/calculate-compatibility
     }
     
     class HelperFunctions {
@@ -223,6 +235,21 @@ classDiagram
         -max_tokens: number
         -temperature: number
         +chat.completions.create()
+    }
+    
+    class PythonScript {
+        +load_models()
+        +load_calendar_data()
+        +calculate_sky()
+        +calculate_earth()
+        +calculate()
+        +main()
+        -model0: Model
+        -model1: Model
+        -calendar_data: dict
+        -MODEL_SKY_PATH: string
+        -MODEL_EARTH_PATH: string
+        -CALENDAR_FILE: string
     }
     
     class Database {
@@ -258,15 +285,17 @@ classDiagram
         +dotenv.config()
     }
     
-    ExpressServer --> Middleware
-    ExpressServer --> Routes
-    Routes --> HelperFunctions
-    Routes --> OpenAIService
-    Routes --> Database
-    Database --> UserModel
-    Database --> CompatibilityResultModel
-    OpenAIService --> EnvironmentVars
-    HelperFunctions --> EnvironmentVars
+    ExpressServer <-- Middleware
+    ExpressServer <-- Routes
+    Routes <-- HelperFunctions
+    Routes <-- OpenAIService
+    Routes <-- PythonScript
+    Routes <-- Database
+    Database <-- UserModel
+    Database <-- CompatibilityResultModel
+    OpenAIService <-- EnvironmentVars
+    HelperFunctions <-- EnvironmentVars
+    PythonScript <-- EnvironmentVars
             </div>
         </div>
 
@@ -276,13 +305,16 @@ classDiagram
             <strong>프론트엔드:</strong><br>
             - RootLayout이 AuthContext와 UserDataContext를 제공합니다.<br>
             - 화면 컴포넌트들은 Context를 통해 상태를 공유합니다.<br>
-            - Utils 모듈들은 화면 컴포넌트에서 사용됩니다.
+            - Utils 모듈들은 화면 컴포넌트에서 사용됩니다.<br>
+            - apiClient의 compatibilityAPI를 통해 백엔드의 궁합 계산 API를 호출합니다.<br>
+            - TimePicker는 더 이상 사용되지 않습니다 (시간 입력 제거).
         </div>
         
         <div class="note">
             <strong>백엔드:</strong><br>
             - ExpressServer가 Middleware와 Routes를 관리합니다.<br>
-            - Routes는 HelperFunctions와 OpenAIService를 사용합니다.<br>
+            - Routes는 HelperFunctions, OpenAIService, PythonScript를 사용합니다.<br>
+            - PythonScript는 TensorFlow 모델을 사용하여 궁합 계산을 수행합니다.<br>
             - Database는 향후 구현 예정입니다.<br>
             - EnvironmentVars는 환경 변수를 제공합니다.
         </div>

@@ -33,12 +33,13 @@ export default function LoadingScreen() {
           throw new Error('생년월일이 입력되지 않았습니다.');
         }
 
-        // 생년월일, 생시, 이름, 성별 정보로 궁합 계산
-        const result = calculateCompatibility(
+        // 생년월일, 이름, 성별 정보로 궁합 계산 (비동기)
+        // 시간은 백엔드에서 사용하지 않으므로 전달하지 않음
+        const result = await calculateCompatibility(
           user1.birthDate,
-          user1.birthTime || '12:00',
+          '', // 시간은 사용하지 않음
           user2.birthDate,
-          user2.birthTime || '12:00',
+          '', // 시간은 사용하지 않음
           user1.name || '',
           user2.name || '',
           user1.gender || '',

@@ -1,65 +1,91 @@
 # 궁합문어 백엔드 서버
 
-Node.js + Express로 구현된 백엔드 서버입니다.
+Node.js + Express 기반 백엔드 서버입니다.
 
-## 설치 및 실행
+## 설치
 
-### 1. 의존성 설치
-
+### Node.js 의존성
 ```bash
-cd backend
 npm install
 ```
 
-### 2. 환경 변수 설정
-
-`.env.example` 파일을 `.env`로 복사하고 설정하세요:
-
+### Python 의존성 (TensorFlow 모델 사용 시)
 ```bash
-cp .env.example .env
+pip install -r requirements.txt
 ```
 
-`.env` 파일 편집:
-```env
-PORT=3000
-OPENAI_API_KEY=sk-your-openai-api-key-here
-```
+## 필요한 파일
 
-### 3. 서버 실행
+백엔드 디렉토리에 다음 파일들이 있어야 합니다:
+- `cal.csv` - 절기 정보 데이터
+- `sky3000.h5` - 천간 계산용 TensorFlow 모델
+- `earth3000.h5` - 지지 계산용 TensorFlow 모델
+- `calculate.py` - Python 계산 스크립트
+
+## 실행
 
 ```bash
-# 일반 실행
 npm start
+```
 
-# 개발 모드 (자동 재시작)
+또는 개발 모드 (nodemon 사용):
+```bash
 npm run dev
 ```
 
-서버가 `http://localhost:3000`에서 실행됩니다.
-
 ## API 엔드포인트
 
-### AI 조언
-- `POST /api/ai-advice` - AI 조언 요청
+### POST /api/calculate-compatibility
+사주 궁합 계산 (TensorFlow 모델 사용)
 
-### 인증
-- `POST /api/auth/login` - 로그인
-- `POST /api/auth/signup` - 회원가입
-- `GET /api/auth/profile` - 프로필 조회
-- `PUT /api/auth/profile` - 프로필 업데이트
-
-## 프론트엔드 연결
-
-프론트엔드의 `.env` 파일에 다음을 추가하세요:
-
-```env
-EXPO_PUBLIC_USE_BACKEND_API=true
-EXPO_PUBLIC_API_BASE_URL=http://localhost:3000
+**요청:**
+```json
+{
+  "person0": [1, 2, 3, 4, 5, 6],  // [년간, 년지, 월간, 월지, 일간, 일지]
+  "person1": [7, 8, 9, 10, 11, 12],
+  "gender0": 1,  // 1=남자, 0=여자
+  "gender1": 0
+}
 ```
 
-## 참고사항
+**응답:**
+```json
+{
+  "success": true,
+  "data": {
+    "originalScore": 100.0,
+    "finalScore": 85.0,
+    "sal0": [0, 0, 0, 0, 0, 0, 0, 0],
+    "sal1": [0, 0, 0, 0, 0, 0, 0, 0]
+  }
+}
+```
 
-- 현재는 예시 구현입니다
-- 실제 프로덕션에서는 데이터베이스 연동, 인증 (JWT), 보안 강화가 필요합니다
-- OpenAI API 키가 없어도 기본 조언이 제공됩니다
+### POST /api/ai-advice
+AI 조언 생성
 
+### POST /api/auth/login
+로그인
+
+### POST /api/auth/signup
+회원가입
+
+### GET /api/auth/profile
+프로필 조회
+
+### PUT /api/auth/profile
+프로필 업데이트
+
+## 환경 변수
+
+`.env` 파일에 다음 변수를 설정하세요:
+
+```
+PORT=3000
+OPENAI_API_KEY=your_openai_api_key_here
+```
+
+## 주의사항
+
+- Python이 설치되어 있어야 TensorFlow 모델을 사용할 수 있습니다.
+- Python이 없거나 모델 파일이 없는 경우, 기본값(100점)을 반환합니다.

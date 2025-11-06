@@ -1,14 +1,13 @@
 /**
  * 이용자 정보 입력 화면
  * - 두 명의 이용자 정보를 입력받는 화면
- * - 이름(한글만), 생년월일, 생시, 성별 입력
+ * - 이름(한글만), 생년월일, 성별 입력
  * - 입력 완료 후 로딩 화면으로 이동
  */
 import { AppHeader } from '@/components/AppHeader';
 import { DatePicker } from '@/components/DatePicker';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { TimePicker } from '@/components/TimePicker';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserData } from '@/contexts/UserDataContext';
@@ -46,7 +45,7 @@ export default function InputScreen() {
       setLocalUser1({
         name: user.profile.name || '',
         birthDate: user.profile.birthDate || '',
-        birthTime: user.profile.birthTime || '',
+        birthTime: '', // 시간은 사용하지 않음
         gender: user.profile.gender || '',
       });
       
@@ -147,15 +146,6 @@ export default function InputScreen() {
               />
             </ThemedView>
             <ThemedView style={styles.inputGroup}>
-              <ThemedText style={styles.label}>생시 (선택)</ThemedText>
-              <TimePicker
-                value={localUser1.birthTime}
-                onChange={(time) => setLocalUser1({ ...localUser1, birthTime: time })}
-                placeholder="HH:MM"
-                colorScheme={colorScheme ?? 'light'}
-              />
-            </ThemedView>
-            <ThemedView style={styles.inputGroup}>
               <ThemedText style={styles.label}>성별 *</ThemedText>
               <ThemedView style={styles.genderButtonGroup}>
                 <TouchableOpacity
@@ -228,15 +218,6 @@ export default function InputScreen() {
                 value={localUser2.birthDate}
                 onChange={(date) => setLocalUser2({ ...localUser2, birthDate: date })}
                 placeholder="YYYY-MM-DD"
-                colorScheme={colorScheme ?? 'light'}
-              />
-            </ThemedView>
-            <ThemedView style={styles.inputGroup}>
-              <ThemedText style={styles.label}>생시 (선택)</ThemedText>
-              <TimePicker
-                value={localUser2.birthTime}
-                onChange={(time) => setLocalUser2({ ...localUser2, birthTime: time })}
-                placeholder="HH:MM"
                 colorScheme={colorScheme ?? 'light'}
               />
             </ThemedView>

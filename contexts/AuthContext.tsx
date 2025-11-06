@@ -20,7 +20,7 @@ export interface AuthUser {
   profile?: {
     name: string;
     birthDate: string;
-    birthTime: string;
+    birthTime: string; // 사용하지 않음, 하위 호환성을 위해 유지
     gender: string;
   };
 }

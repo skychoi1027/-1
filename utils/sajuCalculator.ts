@@ -3,6 +3,8 @@
  * 생년월일시를 기반으로 사주를 계산하고 궁합을 분석합니다.
  */
 
+import { compatibilityAPI } from './apiClient';
+
 // 천간 (10개)
 const GAN = ['갑', '을', '병', '정', '무', '기', '경', '신', '임', '계'];
 // 지지 (12개)
@@ -184,237 +186,125 @@ export function calculateSaju(
 }
 
 /**
- * 사주에서 모든 지지 추출
- * - 년지, 월지, 일지, 시지를 배열로 반환
- * - 살 분석에 사용
+ * 사주에서 모든 지지 추출 함수 - 제거됨
+ * 백엔드 API에서 계산하므로 더 이상 사용되지 않습니다.
+ * 
+ * @deprecated 백엔드 API를 사용하세요.
  */
-function getAllJi(saju: Saju): string[] {
-  return [saju.year.ji, saju.month.ji, saju.day.ji, saju.hour.ji];
-}
+// function getAllJi - 제거됨
 
 /**
- * 살(煞) 분석 - 충돌, 형, 파, 해 계산
- * - 두 사람의 사주를 비교하여 감점 요소인 '살' 계산
- * - 충살: 서로 반대되는 지지 관계
- * - 형살: 형벌 관계
- * - 파살: 파괴 관계
- * - 해살: 해로움 관계
+ * 지지를 숫자로 변환 (1-12)
  */
-function analyzeSal(saju1: Saju, saju2: Saju): SalAnalysis[] {
-  const ji1 = getAllJi(saju1);
-  const ji2 = getAllJi(saju2);
-  const results: SalAnalysis[] = [];
-  
-  // 충살 (충돌)
-  let chungCount = 0;
-  for (const ji of ji1) {
-    if (ji2.includes(CHUNG_RELATIONS[ji])) {
-      chungCount++;
-    }
-  }
-  if (chungCount > 0) {
-    results.push({
-      type: '충살',
-      count: chungCount,
-      description: '충살은 서로 반대되는 성향으로 인한 갈등을 의미합니다.',
-    });
-  }
-  
-  // 형살 (형벌)
-  let hyeongCount = 0;
-  for (const ji of ji1) {
-    const hyeongTargets = HYEONG_RELATIONS[ji] || [];
-    for (const target of hyeongTargets) {
-      if (ji2.includes(target)) {
-        hyeongCount++;
-      }
-    }
-  }
-  if (hyeongCount > 0) {
-    results.push({
-      type: '형살',
-      count: hyeongCount,
-      description: '형살은 상호간의 충돌과 다툼을 나타냅니다.',
-    });
-  }
-  
-  // 파살 (파괴)
-  let paCount = 0;
-  for (const ji of ji1) {
-    if (ji2.includes(PA_RELATIONS[ji])) {
-      paCount++;
-    }
-  }
-  if (paCount > 0) {
-    results.push({
-      type: '파살',
-      count: paCount,
-      description: '파살은 관계의 불안정성을 나타냅니다.',
-    });
-  }
-  
-  // 해살 (해로움)
-  let haeCount = 0;
-  for (const ji of ji1) {
-    if (ji2.includes(HAE_RELATIONS[ji])) {
-      haeCount++;
-    }
-  }
-  if (haeCount > 0) {
-    results.push({
-      type: '해살',
-      count: haeCount,
-      description: '해살은 서로 해를 끼치는 요소입니다.',
-    });
-  }
-  
-  return results;
-}
-
-/**
- * 오행 분석
- * - 두 사람의 사주에서 오행(목, 화, 토, 금, 수) 추출
- * - 상생 관계와 상극 관계 계산
- * - 상생: 점수 가점, 상극: 점수 감점
- */
-function analyzeElement(saju1: Saju, saju2: Saju): {
-  compatible: number;   // 상생 관계 개수
-  incompatible: number; // 상극 관계 개수
-} {
-  const elements1: string[] = [];
-  const elements2: string[] = [];
-  
-  // 사주1의 오행 추출
-  Object.values(saju1).forEach(({ gan, ji }) => {
-    elements1.push(ELEMENT_MAP[gan] || '');
-    elements1.push(ELEMENT_MAP[ji] || '');
-  });
-  
-  // 사주2의 오행 추출
-  Object.values(saju2).forEach(({ gan, ji }) => {
-    elements2.push(ELEMENT_MAP[gan] || '');
-    elements2.push(ELEMENT_MAP[ji] || '');
-  });
-  
-  let compatible = 0;
-  let incompatible = 0;
-  
-  // 상생 관계 계산
-  for (const elem1 of elements1) {
-    if (!elem1) continue;
-    for (const elem2 of elements2) {
-      if (!elem2) continue;
-      if (ELEMENT_RELATIONS.상생[elem1 as keyof typeof ELEMENT_RELATIONS.상생] === elem2 ||
-          ELEMENT_RELATIONS.상생[elem2 as keyof typeof ELEMENT_RELATIONS.상생] === elem1) {
-        compatible++;
-      }
-      if (ELEMENT_RELATIONS.상극[elem1 as keyof typeof ELEMENT_RELATIONS.상극] === elem2 ||
-          ELEMENT_RELATIONS.상극[elem2 as keyof typeof ELEMENT_RELATIONS.상극] === elem1) {
-        incompatible++;
-      }
-    }
-  }
-  
-  return { compatible, incompatible };
-}
-
-/**
- * 이름의 획수 계산 (간단한 버전)
- */
-function calculateNameStrokes(name: string): number {
-  if (!name || name.trim().length === 0) return 0;
-  
-  // 한글 이름의 간단한 획수 계산 (실제로는 더 복잡하지만 간략화)
-  // 각 글자의 획수 대략값
-  const strokeMap: { [key: string]: number } = {
-    '가': 3, '나': 2, '다': 3, '라': 4, '마': 3, '바': 4, '사': 4, '아': 3,
-    '자': 5, '차': 4, '카': 3, '타': 4, '파': 4, '하': 3,
+function jiToNumber(ji: string): number {
+  const jiMap: { [key: string]: number } = {
+    '자': 1, '축': 2, '인': 3, '묘': 4, '진': 5, '사': 6,
+    '오': 7, '미': 8, '신': 9, '유': 10, '술': 11, '해': 12,
   };
-  
-  let totalStrokes = 0;
-  for (const char of name) {
-    // 한글인 경우 대략적인 획수 계산
-    if (char >= '가' && char <= '힣') {
-      const code = char.charCodeAt(0) - '가'.charCodeAt(0);
-      // 간단한 획수 추정 (실제로는 더 정확한 계산 필요)
-      totalStrokes += 5 + (code % 10); // 5-15 획 사이
-    } else {
-      totalStrokes += 3; // 영문/숫자 등은 3획으로 가정
-    }
-  }
-  
-  return totalStrokes;
+  return jiMap[ji] || 0;
 }
 
 /**
- * 이름의 음양오행 계산
+ * 천간을 숫자로 변환 (1-10)
  */
-function getNameElement(name: string): string {
-  if (!name || name.trim().length === 0) return '토';
-  
-  const strokes = calculateNameStrokes(name);
-  // 획수에 따른 오행 매핑
-  const element = strokes % 5;
-  const elements = ['목', '화', '토', '금', '수'];
-  return elements[element];
+function ganToNumber(gan: string): number {
+  const ganMap: { [key: string]: number } = {
+    '갑': 1, '을': 2, '병': 3, '정': 4, '무': 5,
+    '기': 6, '경': 7, '신': 8, '임': 9, '계': 10,
+  };
+  return ganMap[gan] || 0;
 }
 
 /**
- * 성별 조합 점수 계산
+ * 살(煞) 분석 함수 - 제거됨
+ * 백엔드 API에서 계산하므로 더 이상 사용되지 않습니다.
+ * 
+ * @deprecated 백엔드 API를 사용하세요.
  */
-function calculateGenderCompatibility(gender1: string, gender2: string): number {
-  if (!gender1 || !gender2) return 0;
-  
-  const g1 = gender1.trim();
-  const g2 = gender2.trim();
-  
-  // 이성 조합은 긍정적
-  if ((g1 === '남' && g2 === '여') || (g1 === '여' && g2 === '남')) {
-    return 5; // 이성 조합 가점
-  }
-  
-  // 동성 조합은 중립
-  return 0;
-}
+// analyzeSal 함수는 백엔드 API로 대체되었습니다.
 
 /**
- * 일간과 성별의 음양 조화 계산
+ * 오행 분석 함수 - 제거됨
+ * 백엔드 API에서 계산하므로 더 이상 사용되지 않습니다.
+ * 
+ * @deprecated 백엔드 API를 사용하세요.
  */
-function calculateYinYangHarmony(saju: Saju, gender: string): number {
-  if (!gender) return 0;
-  
-  const dayGan = saju.day.gan;
-  // 양간: 갑, 병, 무, 경, 임
-  // 음간: 을, 정, 기, 신, 계
-  const yangGan = ['갑', '병', '무', '경', '임'];
-  const isYang = yangGan.includes(dayGan);
-  
-  // 남자는 양간, 여자는 음간을 선호하는 경향
-  if ((gender === '남' && isYang) || (gender === '여' && !isYang)) {
-    return 3; // 음양 조화 가점
-  }
-  
-  return 0;
-}
+// function analyzeElement - 제거됨
+
+/**
+ * 이름의 획수 계산 함수 - 제거됨
+ * 백엔드 API에서 계산하므로 더 이상 사용되지 않습니다.
+ * 
+ * @deprecated 백엔드 API를 사용하세요.
+ */
+// function calculateNameStrokes - 제거됨
+
+/**
+ * 이름의 음양오행 계산 함수 - 제거됨
+ * 백엔드 API에서 계산하므로 더 이상 사용되지 않습니다.
+ * 
+ * @deprecated 백엔드 API를 사용하세요.
+ */
+// function getNameElement - 제거됨
+
+/**
+ * 성별 조합 점수 계산 함수 - 제거됨
+ * 백엔드 API에서 계산하므로 더 이상 사용되지 않습니다.
+ * 
+ * @deprecated 백엔드 API를 사용하세요.
+ */
+// function calculateGenderCompatibility - 제거됨
+
+/**
+ * 일간과 성별의 음양 조화 계산 함수 - 제거됨
+ * 백엔드 API에서 계산하므로 더 이상 사용되지 않습니다.
+ * 
+ * @deprecated 백엔드 API를 사용하세요.
+ */
+// function calculateYinYangHarmony - 제거됨
 
 /**
  * 궁합 점수 계산 (메인 함수)
- * - 두 사람의 생년월일시, 이름, 성별을 기반으로 궁합 점수 계산
- * - 기본 점수 100점에서 살, 오행 상극, 이름 불일치 등으로 감점
- * - 오행 상생, 성별 조합, 음양 조화 등으로 가점
- * - 최종 점수는 0-100점 사이
+ * - 두 사람의 생년월일, 이름, 성별을 기반으로 궁합 점수 계산
+ * - 백엔드 API를 통해 TensorFlow 모델을 사용하여 계산
+ * - 시간은 사용하지 않음 (기본값 12시 사용)
+ * - 이름은 백엔드로 전달하지 않지만 UI 표시용으로 유지
  * 
  * @param birthDate1 첫 번째 사람의 생년월일 (YYYY-MM-DD)
- * @param birthTime1 첫 번째 사람의 생시 (HH:MM)
+ * @param birthTime1 첫 번째 사람의 생시 (HH:MM) - 사용하지 않음
  * @param birthDate2 두 번째 사람의 생년월일 (YYYY-MM-DD)
- * @param birthTime2 두 번째 사람의 생시 (HH:MM)
- * @param name1 첫 번째 사람의 이름 (한글)
- * @param name2 두 번째 사람의 이름 (한글)
+ * @param birthTime2 두 번째 사람의 생시 (HH:MM) - 사용하지 않음
+ * @param name1 첫 번째 사람의 이름 (한글) - UI 표시용
+ * @param name2 두 번째 사람의 이름 (한글) - UI 표시용
  * @param gender1 첫 번째 사람의 성별 ('남' 또는 '여')
  * @param gender2 두 번째 사람의 성별 ('남' 또는 '여')
  * @returns 궁합 점수, 사주 정보, 살 분석 결과, 설명
  */
-export function calculateCompatibility(
+/**
+ * 사주를 숫자 배열로 변환 (백엔드 API용)
+ * [년간, 년지, 월간, 월지, 일간, 일지]
+ */
+function sajuToNumberArray(saju: Saju): number[] {
+  return [
+    ganToNumber(saju.year.gan),
+    jiToNumber(saju.year.ji),
+    ganToNumber(saju.month.gan),
+    jiToNumber(saju.month.ji),
+    ganToNumber(saju.day.gan),
+    jiToNumber(saju.day.ji),
+  ];
+}
+
+/**
+ * 성별을 숫자로 변환 (1=남자, 0=여자)
+ */
+function genderToNumber(gender: string): number {
+  if (!gender) return 0;
+  const g = gender.trim();
+  return (g === '남' || g === '남자' || g === 'male' || g === '1') ? 1 : 0;
+}
+
+export async function calculateCompatibility(
   birthDate1: string,
   birthTime1: string,
   birthDate2: string,
@@ -423,13 +313,13 @@ export function calculateCompatibility(
   name2: string = '',
   gender1: string = '',
   gender2: string = ''
-): {
+): Promise<{
   score: number;              // 궁합 점수 (0-100)
   saju1: Saju;                // 첫 번째 사람의 사주
   saju2: Saju;                // 두 번째 사람의 사주
   salAnalysis: SalAnalysis[]; // 살 분석 결과
   explanation: string;         // 점수에 대한 설명
-} {
+}> {
   // 생년월일 파싱 및 검증
   if (!birthDate1 || !birthDate2) {
     throw new Error('생년월일은 필수입니다.');
@@ -462,87 +352,87 @@ export function calculateCompatibility(
     throw new Error('일은 1일부터 31일까지 입력 가능합니다.');
   }
   
-  // 생시 파싱 (선택적)
-  let h1 = 12, h2 = 12;
-  if (birthTime1) {
-    const time1Parts = birthTime1.split(':');
-    if (time1Parts.length >= 1) {
-      const hour1 = Number(time1Parts[0]);
-      if (!isNaN(hour1) && hour1 >= 0 && hour1 <= 23) {
-        h1 = hour1;
-      }
-    }
-  }
-  if (birthTime2) {
-    const time2Parts = birthTime2.split(':');
-    if (time2Parts.length >= 1) {
-      const hour2 = Number(time2Parts[0]);
-      if (!isNaN(hour2) && hour2 >= 0 && hour2 <= 23) {
-        h2 = hour2;
-      }
-    }
-  }
+  // 1. 사주 계산: 양력 날짜를 간지로 변환 (시간은 사용하지 않음, 기본값 12시 사용)
+  const saju1 = calculateSaju(y1, m1, d1, 12);
+  const saju2 = calculateSaju(y2, m2, d2, 12);
   
-  // 1. 사주 계산: 양력 날짜를 간지로 변환
-  const saju1 = calculateSaju(y1, m1, d1, h1);
-  const saju2 = calculateSaju(y2, m2, d2, h2);
+  // 2. 백엔드 API 호출 (TensorFlow 모델 사용)
+  const person0 = sajuToNumberArray(saju1);
+  const person1 = sajuToNumberArray(saju2);
+  const gender0 = genderToNumber(gender1);
+  const gender1_num = genderToNumber(gender2);
   
-  // 2. 살 분석: 두 사주 비교하여 감점 요소 계산
-  const salAnalysis = analyzeSal(saju1, saju2);
-  
-  // 3. 오행 분석: 상생/상극 관계 계산
-  const elementAnalysis = analyzeElement(saju1, saju2);
-  
-  // 4. 기본 점수: 100점에서 시작
-  let score = 100;
-  
-  // 5. 살에 따른 감점: 각 살당 10점 감점
-  salAnalysis.forEach((sal) => {
-    score -= sal.count * 10;
+  const backendResult = await compatibilityAPI.calculateCompatibility({
+    person0,
+    person1,
+    gender0,
+    gender1: gender1_num,
   });
   
-  // 6. 오행 상극에 따른 감점: 상극 관계당 2점 감점
-  score -= elementAnalysis.incompatible * 2;
+  if (!backendResult.success || !backendResult.data) {
+    throw new Error(
+      backendResult.message || backendResult.error || '백엔드 API 호출 실패'
+    );
+  }
   
-  // 7. 오행 상생에 따른 가점: 상생 관계당 1점 가점 (최대 10점)
-  score += Math.min(elementAnalysis.compatible * 1, 10);
+  // 3. 백엔드에서 계산된 점수와 살 데이터 사용
+  const score = backendResult.data.finalScore;
+  const backendSal0 = backendResult.data.sal0 || [0, 0, 0, 0, 0, 0, 0, 0];
+  const backendSal1 = backendResult.data.sal1 || [0, 0, 0, 0, 0, 0, 0, 0];
   
-  // 8. 성별 조합 점수: 이성 조합이면 5점 가점
-  const genderScore = calculateGenderCompatibility(gender1, gender2);
-  score += genderScore;
+  console.log('백엔드 API 호출 성공:', {
+    originalScore: backendResult.data.originalScore,
+    finalScore: backendResult.data.finalScore,
+  });
   
-  // 9. 음양 조화 점수: 일간과 성별의 음양 조화
-  const yinYangScore1 = calculateYinYangHarmony(saju1, gender1);
-  const yinYangScore2 = calculateYinYangHarmony(saju2, gender2);
-  score += yinYangScore1 + yinYangScore2;
+  const salResult = {
+    sal0: backendSal0,
+    sal1: backendSal1,
+    totalDeduction: backendResult.data.originalScore - score,
+  };
   
-  // 10. 이름 오행 조화: 이름의 오행이 상생/상극 관계인지 확인
-  if (name1 && name2) {
-    const nameElement1 = getNameElement(name1);
-    const nameElement2 = getNameElement(name2);
-    
-    // 이름 오행이 상생 관계면 가점 (3점)
-    if (ELEMENT_RELATIONS.상생[nameElement1 as keyof typeof ELEMENT_RELATIONS.상생] === nameElement2 ||
-        ELEMENT_RELATIONS.상생[nameElement2 as keyof typeof ELEMENT_RELATIONS.상생] === nameElement1) {
-      score += 3;
-    }
-    
-    // 이름 오행이 상극 관계면 감점 (2점)
-    if (ELEMENT_RELATIONS.상극[nameElement1 as keyof typeof ELEMENT_RELATIONS.상극] === nameElement2 ||
-        ELEMENT_RELATIONS.상극[nameElement2 as keyof typeof ELEMENT_RELATIONS.상극] === nameElement1) {
-      score -= 2;
-    }
-    
-    // 이름 획수 차이가 적으면 가점 (2점): 획수 차이가 5 이하일 때
-    const strokes1 = calculateNameStrokes(name1);
-    const strokes2 = calculateNameStrokes(name2);
-    const strokeDiff = Math.abs(strokes1 - strokes2);
-    if (strokeDiff <= 5) {
-      score += 2;
+  // 5. 살 분석 결과를 SalAnalysis 형식으로 변환
+  const salAnalysis: SalAnalysis[] = [];
+  const salNames = [
+    '열정 에너지 예술 중독',
+    '예민 직감 영적 불안',
+    '감정기복 갈등 오해 고독',
+    '강함 용감 충동 변화',
+    '책임감 의리 완벽 자존심 인내',
+    '충돌 자유 고집',
+    '카리스마 승부욕 용감 외로움',
+    '의지 솔직 직설 개성 고집 독립심',
+  ];
+  
+  // 첫 번째 사람의 살
+  for (let i = 0; i < 8; i++) {
+    if (salResult.sal0[i] > 0) {
+      salAnalysis.push({
+        type: salNames[i],
+        count: Math.round(salResult.sal0[i]),
+        description: `${salNames[i]} 살이 ${Math.round(salResult.sal0[i])}점 감점되었습니다.`,
+      });
     }
   }
   
-  // 11. 점수 범위 조정: 0-100점 사이로 제한
+  // 두 번째 사람의 살
+  for (let i = 0; i < 8; i++) {
+    if (salResult.sal1[i] > 0) {
+      const existing = salAnalysis.find((s) => s.type === salNames[i]);
+      if (existing) {
+        existing.count += Math.round(salResult.sal1[i]);
+        existing.description = `${salNames[i]} 살이 총 ${existing.count}점 감점되었습니다.`;
+      } else {
+        salAnalysis.push({
+          type: salNames[i],
+          count: Math.round(salResult.sal1[i]),
+          description: `${salNames[i]} 살이 ${Math.round(salResult.sal1[i])}점 감점되었습니다.`,
+        });
+      }
+    }
+  }
+  
+  // 6. 점수 범위 조정: 0-100점 사이로 제한
   score = Math.max(0, Math.min(100, score));
   
   // 12. 점수에 따른 설명 생성

@@ -207,3 +207,38 @@ export const aiAPI = {
   },
 };
 
+/**
+ * 궁합 계산 API
+ */
+export const compatibilityAPI = {
+  /**
+   * 사주 궁합 계산 (TensorFlow 모델 사용)
+   * @param person0 [년간, 년지, 월간, 월지, 일간, 일지] - 첫 번째 사람의 사주
+   * @param person1 [년간, 년지, 월간, 월지, 일간, 일지] - 두 번째 사람의 사주
+   * @param gender0 첫 번째 사람의 성별 (1=남자, 0=여자)
+   * @param gender1 두 번째 사람의 성별 (1=남자, 0=여자)
+   */
+  async calculateCompatibility(request: {
+    person0: number[];
+    person1: number[];
+    gender0: number;
+    gender1: number;
+  }) {
+    return apiRequest<{
+      success: boolean;
+      data?: {
+        originalScore: number;
+        finalScore: number;
+        sal0: number[];
+        sal1: number[];
+        fallback?: boolean;
+      };
+      message?: string;
+      error?: string;
+    }>('/api/calculate-compatibility', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
+  },
+};
+

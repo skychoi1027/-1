@@ -5,8 +5,12 @@
 
 const express = require('express');
 const cors = require('cors');
+const { exec } = require('child_process');
+const { promisify } = require('util');
+const path = require('path');
 require('dotenv').config();
 
+const execAsync = promisify(exec);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -191,6 +195,99 @@ app.put('/api/auth/profile', async (req, res) => {
     res.status(500).json({
       success: false,
       message: '프로필 업데이트 중 오류가 발생했습니다.',
+    });
+  }
+});
+
+// 사주 궁합 계산 API (Python TensorFlow 모델 사용)
+app.post('/api/calculate-compatibility', async (req, res) => {
+  try {
+    const { person0, person1, gender0, gender1 } = req.body;
+
+    // 입력값 검증
+    if (!person0 || !person1 || !Array.isArray(person0) || !Array.isArray(person1)) {
+      return res.status(400).json({
+        success: false,
+        message: 'person0와 person1 배열이 필요합니다.',
+      });
+    }
+
+    if (person0.length !== 6 || person1.length !== 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'person0와 person1은 각각 6개의 요소(년간, 년지, 월간, 월지, 일간, 일지)를 가져야 합니다.',
+      });
+    }
+
+    // Python 스크립트에 전달할 데이터 준비
+    const inputData = {
+      person0: person0, // [년간, 년지, 월간, 월지, 일간, 일지]
+      person1: person1,
+      gender0: gender0 === '남자' || gender0 === 'male' || gender0 === 1 ? 1 : 0,
+      gender1: gender1 === '남자' || gender1 === 'male' || gender1 === 1 ? 1 : 0,
+    };
+
+    // Python 스크립트 경로
+    const pythonScriptPath = path.join(__dirname, 'calculate.py');
+    
+    // Windows와 Linux/Mac 모두 지원
+    const isWindows = process.platform === 'win32';
+    const pythonCommand = isWindows ? 'python' : 'python3';
+    
+    // Python 스크립트 실행
+    try {
+      // JSON 데이터를 파일로 전달 (echo는 Windows에서 문제가 있을 수 있음)
+      const inputJson = JSON.stringify(inputData);
+      const command = isWindows
+        ? `echo ${inputJson} | ${pythonCommand} "${pythonScriptPath}"`
+        : `echo '${inputJson}' | ${pythonCommand} "${pythonScriptPath}"`;
+      
+      const { stdout, stderr } = await execAsync(command, {
+        cwd: __dirname, // 백엔드 디렉토리에서 실행 (모델 파일 위치)
+        maxBuffer: 10 * 1024 * 1024, // 10MB 버퍼
+        shell: true, // Windows에서도 동작하도록
+      });
+
+      if (stderr && !stderr.includes('WARNING')) {
+        console.error('Python 스크립트 오류:', stderr);
+      }
+
+      // Python 출력 파싱
+      const result = JSON.parse(stdout.trim());
+
+      if (!result.success) {
+        return res.status(500).json({
+          success: false,
+          message: result.error || '계산 중 오류가 발생했습니다.',
+        });
+      }
+
+      // 성공 응답
+      res.json({
+        success: true,
+        data: result.data,
+      });
+    } catch (execError) {
+      console.error('Python 실행 오류:', execError);
+      
+      // Python이 설치되지 않았거나 모델 파일이 없는 경우 기본값 반환
+      return res.json({
+        success: true,
+        data: {
+          originalScore: 100,
+          finalScore: 100,
+          sal0: [0, 0, 0, 0, 0, 0, 0, 0],
+          sal1: [0, 0, 0, 0, 0, 0, 0, 0],
+          fallback: true, // 기본값 사용 표시
+        },
+      });
+    }
+  } catch (error) {
+    console.error('궁합 계산 오류:', error);
+    res.status(500).json({
+      success: false,
+      message: '궁합 계산 중 오류가 발생했습니다.',
+      error: error.message,
     });
   }
 });

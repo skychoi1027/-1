@@ -1,13 +1,12 @@
 /**
  * 내 정보 화면 (프로필 설정)
- * - 궁합 입력 시 필요한 정보 저장 (이름, 생년월일, 생시, 성별)
+ * - 궁합 입력 시 필요한 정보 저장 (이름, 생년월일, 성별)
  * - 저장된 정보를 다음 입력 시 자동으로 불러올 수 있음
  */
 import { AppHeader } from '@/components/AppHeader';
 import { DatePicker } from '@/components/DatePicker';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { TimePicker } from '@/components/TimePicker';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/contexts/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -24,7 +23,6 @@ export default function ProfileScreen() {
   // 프로필 정보 상태
   const [name, setName] = useState('');
   const [birthDate, setBirthDate] = useState('');
-  const [birthTime, setBirthTime] = useState('');
   const [gender, setGender] = useState('');
 
   // 저장된 프로필 정보 불러오기
@@ -32,7 +30,6 @@ export default function ProfileScreen() {
     if (user?.profile) {
       setName(user.profile.name || '');
       setBirthDate(user.profile.birthDate || '');
-      setBirthTime(user.profile.birthTime || '');
       setGender(user.profile.gender || '');
     }
   }, [user]);
@@ -57,7 +54,7 @@ export default function ProfileScreen() {
     updateProfile({
       name: koreanOnly,
       birthDate,
-      birthTime: birthTime || '12:00',
+      birthTime: '', // 시간은 사용하지 않음
       gender,
     });
 
@@ -133,17 +130,6 @@ export default function ProfileScreen() {
                 value={birthDate}
                 onChange={setBirthDate}
                 placeholder="YYYY-MM-DD"
-                colorScheme={colorScheme}
-              />
-            </ThemedView>
-
-            {/* 생시 입력 */}
-            <ThemedView style={styles.inputGroup}>
-              <ThemedText style={styles.label}>생시</ThemedText>
-              <TimePicker
-                value={birthTime}
-                onChange={setBirthTime}
-                placeholder="HH:MM"
                 colorScheme={colorScheme}
               />
             </ThemedView>

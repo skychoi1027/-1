@@ -161,7 +161,7 @@ SajuMonooApp/
 │   │   ├── index.tsx      # 홈 화면
 │   │   └── explore.tsx    # 탐색 화면
 │   ├── _layout.tsx        # 루트 레이아웃 (Provider 설정)
-│   ├── input.tsx          # 이용자 정보 입력 화면
+│   ├── input.tsx          # 이용자 정보 입력 화면 (이름, 생년월일, 성별)
 │   ├── loading.tsx        # 로딩 화면 (사주 계산 중)
 │   ├── result.tsx         # 궁합 결과 화면
 │   ├── ai-advice.tsx      # AI 조언 화면
@@ -173,7 +173,7 @@ SajuMonooApp/
 │   ├── AppHeader.tsx      # 앱 헤더 (상단 고정, 로그인 상태 표시)
 │   ├── OctagonGraph.tsx   # 팔각형 방사형 그래프 (8개 살 시각화)
 │   ├── DatePicker.tsx     # 날짜 선택 컴포넌트 (웹/모바일 대응)
-│   ├── TimePicker.tsx     # 시간 선택 컴포넌트 (웹/모바일 대응)
+│   ├── TimePicker.tsx     # 시간 선택 컴포넌트 (현재 미사용, 하위 호환성 유지)
 │   ├── themed-text.tsx    # 테마 적용 텍스트 컴포넌트
 │   ├── themed-view.tsx    # 테마 적용 뷰 컴포넌트
 │   └── ui/                # UI 컴포넌트
@@ -184,14 +184,25 @@ SajuMonooApp/
 │   ├── UserDataContext.tsx     # 사용자 입력 데이터 및 궁합 결과
 │   └── AuthContext.tsx          # 인증 상태 및 사용자 정보
 ├── utils/                 # 유틸리티 함수
-│   ├── sajuCalculator.ts  # 사주 계산 로직 (간지 변환, 살 분석, 점수 계산)
+│   ├── sajuCalculator.ts  # 사주 계산 로직 (간지 변환, 백엔드 API 호출)
+│   ├── apiClient.ts       # 백엔드 API 호출 클라이언트
+│   │                       # - authAPI: 인증 관련 API
+│   │                       # - aiAPI: AI 조언 API
+│   │                       # - compatibilityAPI: 궁합 계산 API
 │   ├── aiService.ts       # AI 조언 서비스 (OpenAI API 연동)
-│   └── apiClient.ts       # 백엔드 API 호출 클라이언트 (인증 토큰 관리)
-├── backend/               # 백엔드 서버 (Node.js + Express)
+│   └── calendarData.ts   # 절기 데이터 파싱 (cal.csv)
+├── backend/               # 백엔드 서버 (Node.js + Express + Python)
 │   ├── server.js          # Express 서버 메인 파일
-│   ├── package.json       # 백엔드 의존성
-│   ├── README.md          # 백엔드 서버 설명
-│   └── .gitignore         # 백엔드 Git 무시 파일
+│   │                       # - AI 조언 API
+│   │                       # - 사용자 인증 API
+│   │                       # - 궁합 계산 API (Python 스크립트 호출)
+│   ├── calculate.py       # Python 궁합 계산 스크립트 (TensorFlow 모델 사용)
+│   ├── cal.csv            # 절기 정보 데이터
+│   ├── sky3000.h5         # 천간 계산용 TensorFlow 모델
+│   ├── earth3000.h5       # 지지 계산용 TensorFlow 모델
+│   ├── requirements.txt   # Python 의존성 (numpy, tensorflow)
+│   ├── package.json       # 백엔드 Node.js 의존성
+│   └── README.md          # 백엔드 서버 설명
 ├── constants/             # 상수 정의
 │   └── theme.ts           # 테마 색상 및 스타일
 ├── hooks/                 # 커스텀 훅
@@ -213,6 +224,7 @@ SajuMonooApp/
 ├── CALCULATION_EXPLANATION.md # 사주 계산 로직 설명
 ├── CLEAR_CACHE.md         # Expo 캐시 문제 해결
 ├── TODO_IMPLEMENTATION.md # 구현 예정 기능
+├── class-diagrams.html    # 클래스 다이어그램 (Mermaid.js)
 ├── app.json               # Expo 앱 설정
 ├── package.json           # 프로젝트 의존성 및 스크립트
 └── README.md              # 프로젝트 설명서
@@ -231,20 +243,21 @@ SajuMonooApp/
 - 로그인 상태에 따라 헤더 버튼 자동 변경
 
 ### 3. 내 정보 화면
-- 프로필 정보 저장 (이름, 생년월일, 생시, 성별)
+- 프로필 정보 저장 (이름, 생년월일, 성별)
 - 저장된 정보는 궁합 입력 시 자동으로 불러올 수 있음
 - '내 정보 불러오기' 버튼으로 편리하게 사용
 
 ### 4. 이용자 정보 입력 화면
 - 두 명의 이용자 정보 입력
-  - 이름: 한글만 입력 가능
-  - 생년월일: YYYY-MM-DD 형식
-  - 생시: HH:MM 형식
-  - 성별: 남/여 선택
+  - 이름: 한글만 입력 가능 (UI 표시용, 백엔드로 전달하지 않음)
+  - 생년월일: YYYY-MM-DD 형식 (필수)
+  - 성별: 남/여 선택 (필수)
 - 사용자1 옆 '내 정보 불러오기' 버튼 (로그인 시 사용 가능)
+- 시간 입력은 제거됨 (백엔드에서 사용하지 않음)
 
 ### 5. 로딩 화면
-- 사주 궁합 계산 수행
+- 사주 궁합 계산 수행 (백엔드 API 호출)
+- TensorFlow 모델을 사용한 정교한 계산
 - 계산 완료 후 결과 화면으로 자동 이동
 
 ### 6. 궁합 결과 화면
@@ -262,18 +275,27 @@ SajuMonooApp/
 
 ## 사주 계산 방식
 
-### 감점 요소
-- **살(煞)**: 충살, 형살, 파살, 해살 등
-  - 각 살당 10점 감점
-- **오행 상극**: 상극 관계당 2점 감점
-- **이름 오행 상극**: 2점 감점
+### 백엔드 기반 계산
+- **TensorFlow 모델 사용**: `sky3000.h5`, `earth3000.h5` 모델을 사용한 정교한 계산
+- **Python 스크립트**: `backend/calculate.py`에서 실제 계산 수행
+- **입력 데이터**: 생년월일(사주로 변환), 성별만 사용
+  - 이름과 시간은 사용하지 않음
 
-### 가점 요소
-- **오행 상생**: 상생 관계당 1점 가점 (최대 10점)
-- **성별 조합**: 이성 조합 시 5점 가점
-- **음양 조화**: 일간과 성별의 음양 조화
-- **이름 오행 상생**: 3점 가점
-- **이름 획수 차이**: 획수 차이가 5 이하일 때 2점 가점
+### 계산 프로세스
+1. **사주 변환**: 양력 날짜를 간지(년간, 년지, 월간, 월지, 일간, 일지)로 변환
+2. **TensorFlow 모델 계산**: 천간/지지 조합을 모델에 입력하여 기본 점수 계산
+3. **살(煞) 분석**: 8가지 살 요소를 분석하여 감점 적용
+4. **최종 점수**: 0-100점 사이로 정규화
+
+### 살(煞) 종류 (8가지)
+1. 열정 에너지 예술 중독
+2. 예민 직감 영적 불안
+3. 감정기복 갈등 오해 고독
+4. 강함 용감 충동 변화
+5. 책임감 의리 완벽 자존심 인내
+6. 충돌 자유 고집
+7. 카리스마 승부욕 용감 외로움
+8. 의지 솔직 직설 개성 고집 독립심
 
 ## 추가 기능
 
@@ -458,17 +480,17 @@ SajuMonooApp/
   │  │ (render)       │                                                │
   │  └────────────────┘                                                │
   │                                                                     │
-  │  ┌────────────────┐  ┌────────────────┐                          │
-  │  │ TimePicker     │  │ ThemedText     │                          │
-  │  │ components/    │  │ components/    │                          │
-  │  ├────────────────┤  ├────────────────┤                          │
-  │  │ Attributes:    │  │ Attributes:    │                          │
-  │  │ - value        │  │ - type         │                          │
-  │  ├────────────────┤  │ - style        │                          │
-  │  │ Methods:       │  ├────────────────┤                          │
-  │  │ + onChange()   │  │ Methods:       │                          │
-  │  └────────────────┘  │ (render)       │                          │
-  │                       └────────────────┘                          │
+  │  ┌────────────────┐                                                │
+  │  │ ThemedText     │                                                │
+  │  │ components/    │                                                │
+  │  ├────────────────┤                                                │
+  │  │ Attributes:    │                                                │
+  │  │ - type         │                                                │
+  │  │ - style        │                                                │
+  │  ├────────────────┤                                                │
+  │  │ Methods:       │                                                │
+  │  │ (render)       │                                                │
+  │  └────────────────┘                                                │
   │                                                                     │
   │  ┌────────────────┐                                                │
   │  │ ThemedView     │                                                │
@@ -494,17 +516,25 @@ SajuMonooApp/
   │  │    │    ├─ logout()                                            │      │
   │  │    │    ├─ getProfile()                                        │      │
   │  │    │    └─ updateProfile()                                    │      │
-  │  │    └─ aiAPI {                                                 │      │
-  │  │         └─ getAdvice()                                        │      │
+  │  │    ├─ aiAPI {                                                 │      │
+  │  │    │    └─ getAdvice()                                        │      │
+  │  │    └─ compatibilityAPI {                                     │      │
+  │  │         └─ calculateCompatibility()                           │      │
   │  │                                                               │      │
   │  │  sajuCalculator.ts                                            │      │
   │  │    ├─ calculateSaju()                                         │      │
-  │  │    ├─ analyzeSal() (내부 함수)                                │      │
+  │  │    ├─ sajuToNumberArray()                                     │      │
+  │  │    ├─ genderToNumber()                                        │      │
   │  │    └─ calculateCompatibility()                                 │      │
+  │  │         (백엔드 API 호출)                                      │      │
   │  │                                                               │      │
   │  │  aiService.ts                                                 │      │
   │  │    ├─ getAIAdvice()                                           │      │
   │  │    └─ getAIAdviceGemini()                                     │      │
+  │  │                                                               │      │
+  │  │  calendarData.ts                                              │      │
+  │  │    ├─ loadCalendarData()                                      │      │
+  │  │    └─ getCalendar()                                           │      │
   │  └────────────────────────────────────────────────────────────┘      │
   └─────────────────────────────────────────────────────────────────────┘
 ```
@@ -527,13 +557,17 @@ SajuMonooApp/
 **UI 컴포넌트**
 - `AppHeader`: 상단 헤더, 로고, 인증 버튼
 - `OctagonGraph`: 팔각형 방사형 그래프 (8개 살 시각화)
-- `DatePicker/TimePicker`: 날짜/시간 선택 컴포넌트
+- `DatePicker`: 날짜 선택 컴포넌트 (시간 입력은 제거됨)
 - `ThemedText/ThemedView`: 테마 적용 컴포넌트
 
 **유틸리티**
 - `apiClient`: 백엔드 API 호출, 인증 토큰 관리
-- `sajuCalculator`: 사주 계산 로직 (간지 변환, 살 분석, 점수 계산)
+  - `authAPI`: 로그인, 회원가입, 프로필 관리
+  - `aiAPI`: AI 조언 요청
+  - `compatibilityAPI`: 궁합 계산 요청
+- `sajuCalculator`: 사주 계산 로직 (간지 변환, 백엔드 API 호출)
 - `aiService`: AI 조언 요청 로직
+- `calendarData`: 절기 데이터 파싱 (cal.csv)
 
 ---
 
@@ -587,40 +621,62 @@ SajuMonooApp/
                                      │   ├─ 입력 검증        │
                                      │   └─ 프로필 반환      │
                                      │   (DB 업데이트 예정)  │
+                                     │                      │
+                                     │ + POST /api/calculate-compatibility│
+                                     │   ├─ 입력 검증        │
+                                     │   ├─ Python 스크립트 실행 │
+                                     │   └─ 결과 반환        │
                                      └───────────┬──────────┘
                                                  │
                     ┌───────────────────────────┼───────────────────────────┐
                     │                           │                           │
         ┌───────────▼──────────┐    ┌───────────▼──────────┐    ┌───────────▼──────────┐
-        │  Helper Functions    │    │  OpenAI Service      │    │  Database (예정)     │
-        │  server.js:198-285   │    │  server.js:49-69     │    │                      │
+        │  Helper Functions    │    │  OpenAI Service      │    │  Python Script      │
+        │  server.js:198-285   │    │  server.js:49-69     │    │  calculate.py       │
         ├──────────────────────┤    ├──────────────────────┤    ├──────────────────────┤
-        │ Methods:             │    │ Attributes:          │    │  User Model          │
-        │ - generatePrompt()   │    │ - OpenAI 인스턴스    │    ├──────────────────────┤
-        │   (프롬프트 생성)     │    │ - apiKey (환경변수)  │    │ Attributes:          │
-        │ - parseAIResponse()  │    ├──────────────────────┤    │ - _id                │
-        │   (응답 파싱)        │    │ Methods:             │    │ - email (unique)     │
-        │ - getDefaultAdvice() │    │ + chat.completions   │    │ - password (hash)    │
-        │   (기본 조언)        │    │   .create()          │    │ - name               │
-        │ - getDefaultTips()   │    │ - model: gpt-3.5-turbo│   │ - profile {          │
-        │   (기본 팁)          │    │ - max_tokens: 500    │    │     name             │
-        └──────────────────────┘    │ - temperature: 0.7   │    │     birthDate        │
-                                    └──────────────────────┘    │     birthTime        │
-                                                                │     gender           │
-                                                                │   }                  │
-                                                                │ - createdAt          │
-                                                                │ - updatedAt          │
-                                                                │                      │
-                                                                │ CompatibilityResult │
-                                                                ├──────────────────────┤
-                                                                │ Attributes:          │
-                                                                │ - _id                │
-                                                                │ - userId (ref)       │
-                                                                │ - user1, user2       │
-                                                                │ - score              │
-                                                                │ - salAnalysis        │
-                                                                │ - createdAt          │
+        │ Methods:             │    │ Attributes:          │    │ Methods:             │
+        │ - generatePrompt()   │    │ - OpenAI 인스턴스    │    │ + load_models()      │
+        │   (프롬프트 생성)     │    │ - apiKey (환경변수)  │    │ + load_calendar_data│
+        │ - parseAIResponse()  │    ├──────────────────────┤    │ + calculate_sky()    │
+        │   (응답 파싱)        │    │ Methods:             │    │ + calculate_earth()  │
+        │ - getDefaultAdvice() │    │ + chat.completions   │    │ + calculate()        │
+        │   (기본 조언)        │    │   .create()          │    │   (살 계산)          │
+        │ - getDefaultTips()   │    │ - model: gpt-3.5-turbo│   │ + main()             │
+        │   (기본 팁)          │    │ - max_tokens: 500    │    │                      │
+        └──────────────────────┘    │ - temperature: 0.7   │    │ Attributes:          │
+                                    └──────────────────────┘    │ - sky3000.h5         │
+                                                                │ - earth3000.h5       │
+                                                                │ - cal.csv            │
                                                                 └──────────────────────┘
+                    │
+        ┌───────────▼──────────┐
+        │  Database (예정)     │
+        ├──────────────────────┤
+        │  User Model          │
+        ├──────────────────────┤
+        │ Attributes:          │
+        │ - _id                │
+        │ - email (unique)     │
+        │ - password (hash)    │
+        │ - name               │
+        │ - profile {          │
+        │     name             │
+        │     birthDate        │
+        │     gender           │
+        │   }                  │
+        │ - createdAt          │
+        │ - updatedAt          │
+        │                      │
+        │ CompatibilityResult │
+        ├──────────────────────┤
+        │ Attributes:          │
+        │ - _id                │
+        │ - userId (ref)       │
+        │ - user1, user2       │
+        │ - score              │
+        │ - salAnalysis        │
+        │ - createdAt          │
+        └──────────────────────┘
                     │
         ┌───────────▼──────────┐
         │  Environment Vars   │
@@ -651,9 +707,11 @@ SajuMonooApp/
 - `POST /api/auth/signup`: 사용자 회원가입
 - `GET /api/auth/profile`: 프로필 조회
 - `PUT /api/auth/profile`: 프로필 업데이트
+- `POST /api/calculate-compatibility`: 궁합 계산 (Python 스크립트 호출)
 
 **외부 서비스**
 - OpenAI Service: OpenAI API와 통신 (API 키 보관)
+- Python Script: TensorFlow 모델을 사용한 궁합 계산
 - Database (향후 구현): MongoDB/PostgreSQL 연동 예정
 
 **데이터베이스 스키마 (향후 구현)**

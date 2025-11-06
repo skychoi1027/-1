@@ -13,7 +13,7 @@ import React, { createContext, ReactNode, useContext, useState } from 'react';
 export interface UserData {
   name: string;        // 이름 (한글만)
   birthDate: string;   // 생년월일 (YYYY-MM-DD 형식)
-  birthTime: string;   // 생시 (HH:MM 형식)
+  birthTime: string;   // 생시 (HH:MM 형식) - 사용하지 않음, 하위 호환성을 위해 유지
   gender: string;      // 성별 ('남' 또는 '여')
 }
 

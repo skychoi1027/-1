@@ -141,57 +141,60 @@ classDiagram
     
     class DatePicker {
         -value: string
-        +onChange()
+        +onChange(value)
     }
     
     class apiClient {
-        +apiRequest()
-        +getAuthToken()
-        +setAuthToken()
-        +removeAuthToken()
+        +apiRequest(endpoint, options)
         +authAPI
         +aiAPI
         +compatibilityAPI
+        -getAuthToken()
+        -setAuthToken(token)
+        -removeAuthToken()
     }
     
     class sajuCalculator {
-        +calculateSaju()
-        -getGanjiYear()
-        -getGanjiMonth()
-        -getGanjiDay()
-        -getGanjiHour()
-        +sajuToNumberArray()
-        -ganToNumber()
-        -jiToNumber()
-        +genderToNumber()
-        +calculateCompatibility()
+        +calculateSaju(year, month, day, hour)
+        +calculateCompatibility(birthDate1, birthDate2, name1, name2, gender1, gender2)
+        -getGanjiYear(year)
+        -getGanjiMonth(year, month)
+        -getGanjiDay(year, month, day)
+        -getGanjiHour(dayGan, hour)
+        -ganToNumber(gan)
+        -jiToNumber(ji)
+        -genderToNumber(gender)
+        -sajuToNumberArray(saju)
     }
     
     class aiService {
-        +getAIAdvice()
-        +getAIAdviceGemini()
-    }
-    
-    class calendarData {
-        +loadCalendarData()
-        +getCalendar()
-        -calendarDataCache: object
+        +getAIAdvice(request, apiKey)
+        +getAIAdviceGemini(request, apiKey)
+        -generatePrompt(request)
+        -parseAIResponse(response)
+        -getDefaultAdvice(request)
     }
     
     RootLayout <-- AuthContext
     RootLayout <-- UserDataContext
+    Home <-- AppHeader
     Home <-- Input
+    Input <-- AuthContext
+    Input <-- UserDataContext
+    Input <-- DatePicker
     Input <-- Loading
+    Loading <-- UserDataContext
+    Loading <-- sajuCalculator
     Loading <-- Result
-    Result <-- AIAdvice
+    Result <-- UserDataContext
     Result <-- AppHeader
     Result <-- OctagonGraph
-    Input <-- DatePicker
-    AIAdvice <-- apiClient
-    Loading <-- sajuCalculator
-    sajuCalculator <-- apiClient
+    Result <-- AIAdvice
+    AIAdvice <-- UserDataContext
+    AIAdvice <-- AppHeader
     AIAdvice <-- aiService
-    apiClient <-- aiService
+    AppHeader <-- AuthContext
+    sajuCalculator <-- apiClient
             </div>
         </div>
 
@@ -222,10 +225,10 @@ classDiagram
     }
     
     class HelperFunctions {
-        -generatePrompt()
-        -parseAIResponse()
-        -getDefaultAdvice()
-        -getDefaultTips()
+        -generatePrompt(score, explanation, salAnalysis, user1, user2)
+        -parseAIResponse(response)
+        -getDefaultAdvice(score, explanation, salAnalysis)
+        -getDefaultTips(score)
     }
     
     class OpenAIService {
@@ -240,16 +243,20 @@ classDiagram
     class PythonScript {
         +load_models()
         +load_calendar_data()
-        +calculate_sky()
-        +calculate_earth()
-        +calculate()
+        +calculate_sky(i, j)
+        +calculate_earth(i, j)
+        +calculate(token0, token1, gender0, gender1, score)
         +main()
+        -get_one_hot(target, nb_classes)
         -model0: Model
         -model1: Model
-        -calendar_data: dict
+        -calendar_data: array
         -MODEL_SKY_PATH: string
         -MODEL_EARTH_PATH: string
         -CALENDAR_FILE: string
+        -sky: dict
+        -earth: dict
+        -p1, p11, p2, p21, p3, p31, p41, p42, p43, p5, p6, p7, p71, p8, p81, p82, p83: number
     }
     
     class Database {

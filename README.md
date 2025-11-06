@@ -190,7 +190,6 @@ SajuMonooApp/
 │   │                       # - aiAPI: AI 조언 API
 │   │                       # - compatibilityAPI: 궁합 계산 API
 │   ├── aiService.ts       # AI 조언 서비스 (OpenAI API 연동)
-│   └── calendarData.ts   # 절기 데이터 파싱 (cal.csv)
 ├── backend/               # 백엔드 서버 (Node.js + Express + Python)
 │   ├── server.js          # Express 서버 메인 파일
 │   │                       # - AI 조언 API
@@ -532,9 +531,6 @@ SajuMonooApp/
   │  │    ├─ getAIAdvice()                                           │      │
   │  │    └─ getAIAdviceGemini()                                     │      │
   │  │                                                               │      │
-  │  │  calendarData.ts                                              │      │
-  │  │    ├─ loadCalendarData()                                      │      │
-  │  │    └─ getCalendar()                                           │      │
   │  └────────────────────────────────────────────────────────────┘      │
   └─────────────────────────────────────────────────────────────────────┘
 ```
@@ -567,7 +563,6 @@ SajuMonooApp/
   - `compatibilityAPI`: 궁합 계산 요청
 - `sajuCalculator`: 사주 계산 로직 (간지 변환, 백엔드 API 호출)
 - `aiService`: AI 조언 요청 로직
-- `calendarData`: 절기 데이터 파싱 (cal.csv)
 
 ---
 

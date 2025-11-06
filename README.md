@@ -382,79 +382,104 @@ SajuMonooApp/
         ┌───────▼────────┐    ┌────────▼────────┐    ┌────────▼────────┐
         │ AuthContext    │    │ UserDataContext │    │ Stack Screens   │
         │ contexts/      │    │ contexts/       │    │                 │
-        │                │    │                 │    │ - (tabs)/index  │
-        │ + user         │    │ + user1         │    │ - (tabs)/explore │
-        │ + isAuthenticated│  │ + user2         │    │ - input         │
-        │ + login()      │    │ + setUser1()    │    │ - loading       │
-        │ + logout()     │    │ + setUser2()    │    │ - result        │
-        │ + updateProfile│    │ + compatibility │    │ - ai-advice     │
-        │                │    │   Result        │    │ - login         │
-        │                │    │ + setCompatibility│  │ - signup        │
-        └────────────────┘    │   Result()      │    │ - profile       │
-                              └─────────────────┘    │ - modal         │
-                                                      └────────┬────────┘
+        ├────────────────┤    ├────────────────┤    ├─────────────────┤
+        │ Attributes:    │    │ Attributes:     │    │ Screens:        │
+        │ + user         │    │ + user1         │    │ - (tabs)/index  │
+        │ + isAuthenticated│   │ + user2         │    │ - (tabs)/explore │
+        ├────────────────┤    │ + compatibility │    │ - input         │
+        │ Methods:        │    │   Result        │    │ - loading       │
+        │ + login()      │    ├────────────────┤    │ - result        │
+        │ + logout()     │    │ Methods:        │    │ - ai-advice     │
+        │ + updateProfile│    │ + setUser1()    │    │ - login         │
+        └────────────────┘    │ + setUser2()    │    │ - signup        │
+                              │ + setCompatibility│   │ - profile       │
+                              │   Result()      │    │ - modal         │
+                              └─────────────────┘    └────────┬────────┘
                                                                │
                     ┌──────────────────────────────────────────┼─────────────┐
                     │                                          │             │
           ┌─────────▼────────┐                    ┌───────────▼────────┐   │
           │ Home             │                    │ Input              │   │
           │ app/(tabs)/index │                    │ app/input.tsx      │   │
-          │                  │                    │                    │   │
-          │ - 궁합문어 로고   │                    │ - localUser1       │   │
-          │ - 살 설명 섹션    │                    │ - localUser2       │   │
-          │ - 입력 버튼       │                    │ - handleSubmit()   │   │
-          │                  │                    │ - handleLoadProfile│   │
-          └─────────┬────────┘                    └───────────┬────────┘   │
+          ├──────────────────┤                    ├────────────────────┤
+          │ Attributes:      │                    │ Attributes:        │
+          │ (UI 요소)        │                    │ - localUser1       │
+          ├──────────────────┤                    │ - localUser2       │
+          │ Methods:         │                    ├────────────────────┤
+          │ (render)         │                    │ Methods:           │
+          └─────────┬────────┘                    │ + handleSubmit()   │
+                    │                             │ + handleLoadProfile│
+                    │                             └───────────┬────────┘   │
                     │                                          │             │
                     │                                          │             │
           ┌─────────▼────────┐                    ┌───────────▼────────┐   │
           │ Loading         │                    │ Result             │   │
           │ app/loading.tsx │                    │ app/result.tsx     │   │
-          │                 │                    │                    │   │
-          │ - useEffect()   │                    │ - score            │   │
-          │ - calculate()   │                    │ - explanation      │   │
-          │   (calculateCompatibility)│          │ - salData          │   │
-          └─────────┬────────┘                    │ - OctagonGraph    │   │
-                    │                             │ - navigateToAI()  │   │
+          ├─────────────────┤                    ├────────────────────┤
+          │ Attributes:     │                    │ Attributes:        │
+          │ (state)         │                    │ - score            │
+          ├─────────────────┤                    │ - explanation      │
+          │ Methods:        │                    │ - salData          │
+          │ + useEffect()   │                    │ - saju1, saju2     │
+          │ + calculate()   │                    │ - salAnalysis     │
+          │   (calculateCompatibility)│         │ - OctagonGraph     │
+          └─────────┬────────┘                    ├────────────────────┤
+                    │                             │ Methods:           │
+                    │                             │ + navigateToAI()   │
                     │                             └───────────┬────────┘   │
                     │                                          │             │
                     │                                          │             │
           ┌─────────▼────────┐                    ┌───────────▼────────┐   │
-          │ Result           │                    │ AIAdvice          │   │
-          │ app/result.tsx   │                    │ app/ai-advice.tsx │   │
-          │                  │                    │                    │   │
-          │ - score          │                    │ - advice           │   │
-          │ - saju1, saju2   │                    │ - tips             │   │
-          │ - salAnalysis    │                    │ - summary          │   │
-          │ - OctagonGraph   │                    │ - getAIAdvice()    │   │
+          │ AIAdvice         │                    │                    │   │
+          │ app/ai-advice.tsx│                    │                    │   │
+          ├──────────────────┤                    │                    │   │
+          │ Attributes:      │                    │                    │   │
+          │ - advice         │                    │                    │   │
+          │ - tips           │                    │                    │   │
+          │ - summary        │                    │                    │   │
+          ├──────────────────┤                    │                    │   │
+          │ Methods:         │                    │                    │   │
+          │ + getAIAdvice()  │                    │                    │   │
           └──────────────────┘                    └────────────────────┘   │
                                                                              │
                                                                              │
   ┌─────────────────────────────────────────────────────────────────────────┤
   │                                                                         │
-  │  ┌────────────────┐  ┌────────────────┐  ┌────────────────┐          │
-  │  │ AppHeader      │  │ OctagonGraph   │  │ DatePicker     │          │
-  │  │ components/    │  │ components/    │  │ components/    │          │
-  │  │                │  │                │  │                │          │
-  │  │ - title        │  │ - salData      │  │ - value        │          │
-  │  │ - showHomeBtn  │  │ - renderGraph()│  │ - onChange()    │          │
-  │  │ - showAuthBtn  │  │                │  └────────────────┘          │
-  │  └────────────────┘  └────────────────┘                              │
-  │                                                                         │
-  │  ┌────────────────┐  ┌────────────────┐                              │
-  │  │ TimePicker     │  │ ThemedText     │                              │
-  │  │ components/    │  │ components/    │                              │
-  │  │                │  │                │                              │
-  │  │ - value        │  │ - type         │                              │
-  │  │ - onChange()   │  │ - style        │                              │
-  │  └────────────────┘  └────────────────┘                              │
-  │                                                                         │
-  │  ┌────────────────┐                                                    │
-  │  │ ThemedView     │                                                    │
-  │  │ components/    │                                                    │
-  │  │                │                                                    │
-  │  │ - style        │                                                    │
-  │  └────────────────┘                                                    │
+  │  ┌────────────────┐  ┌────────────────┐  ┌────────────────┐      │
+  │  │ AppHeader      │  │ OctagonGraph   │  │ DatePicker     │      │
+  │  │ components/    │  │ components/    │  │ components/    │      │
+  │  ├────────────────┤  ├────────────────┤  ├────────────────┤      │
+  │  │ Attributes:    │  │ Attributes:    │  │ Attributes:    │      │
+  │  │ - title        │  │ - salData      │  │ - value        │      │
+  │  │ - showHomeBtn  │  ├────────────────┤  ├────────────────┤      │
+  │  │ - showAuthBtn  │  │ Methods:       │  │ Methods:       │      │
+  │  ├────────────────┤  │ + renderGraph()│  │ + onChange()   │      │
+  │  │ Methods:       │  └────────────────┘  └────────────────┘      │
+  │  │ (render)       │                                                │
+  │  └────────────────┘                                                │
+  │                                                                     │
+  │  ┌────────────────┐  ┌────────────────┐                          │
+  │  │ TimePicker     │  │ ThemedText     │                          │
+  │  │ components/    │  │ components/    │                          │
+  │  ├────────────────┤  ├────────────────┤                          │
+  │  │ Attributes:    │  │ Attributes:    │                          │
+  │  │ - value        │  │ - type         │                          │
+  │  ├────────────────┤  │ - style        │                          │
+  │  │ Methods:       │  ├────────────────┤                          │
+  │  │ + onChange()   │  │ Methods:       │                          │
+  │  └────────────────┘  │ (render)       │                          │
+  │                       └────────────────┘                          │
+  │                                                                     │
+  │  ┌────────────────┐                                                │
+  │  │ ThemedView     │                                                │
+  │  │ components/    │                                                │
+  │  ├────────────────┤                                                │
+  │  │ Attributes:    │                                                │
+  │  │ - style        │                                                │
+  │  ├────────────────┤                                                │
+  │  │ Methods:       │                                                │
+  │  │ (render)       │                                                │
+  │  └────────────────┘                                                │
   │                                                                         │
   │  ┌────────────────────────────────────────────────────────────┐      │
   │  │ Utils                                                         │      │
@@ -530,38 +555,38 @@ SajuMonooApp/
         ┌───────────▼──────────┐    ┌───────────▼──────────┐
         │  Middleware          │    │  Routes              │
         │  server.js:13-15     │    │  server.js:17-196    │
-        │                      │    │                      │
-        │  - cors()            │    │  GET  /              │
-        │    (CORS 허용)        │    │       └─ 상태 확인    │
-        │  - express.json()    │    │                      │
-        │    (JSON 파싱)        │    │  POST /api/ai-advice │
-        └──────────────────────┘    │       ├─ 입력 검증    │
-                                     │       ├─ OpenAI 호출 │
-                                     │       ├─ 기본 조언    │
-                                     │       └─ 응답 반환    │
+        ├──────────────────────┤    ├──────────────────────┤
+        │ Methods:             │    │ Methods:             │
+        │ + cors()             │    │ + GET  /              │
+        │   (CORS 허용)        │    │   └─ 상태 확인        │
+        │ + express.json()    │    │ + POST /api/ai-advice │
+        │   (JSON 파싱)        │    │   ├─ 입력 검증        │
+        └──────────────────────┘    │   ├─ OpenAI 호출     │
+                                     │   ├─ 기본 조언        │
+                                     │   └─ 응답 반환        │
                                      │                      │
-                                     │  POST /api/auth/login │
-                                     │       ├─ 입력 검증    │
-                                     │       ├─ 인증 처리    │
-                                     │       └─ 토큰 발급    │
-                                     │       (DB 조회 예정)  │
+                                     │ + POST /api/auth/login│
+                                     │   ├─ 입력 검증        │
+                                     │   ├─ 인증 처리        │
+                                     │   └─ 토큰 발급        │
+                                     │   (DB 조회 예정)      │
                                      │                      │
-                                     │  POST /api/auth/signup│
-                                     │       ├─ 입력 검증    │
-                                     │       ├─ 회원가입     │
-                                     │       └─ 토큰 발급    │
-                                     │       (DB 저장 예정)  │
+                                     │ + POST /api/auth/signup│
+                                     │   ├─ 입력 검증        │
+                                     │   ├─ 회원가입         │
+                                     │   └─ 토큰 발급        │
+                                     │   (DB 저장 예정)      │
                                      │                      │
-                                     │  GET  /api/auth/profile│
-                                     │       ├─ 토큰 검증     │
-                                     │       └─ 프로필 반환  │
-                                     │       (DB 조회 예정)  │
+                                     │ + GET  /api/auth/profile│
+                                     │   ├─ 토큰 검증        │
+                                     │   └─ 프로필 반환      │
+                                     │   (DB 조회 예정)      │
                                      │                      │
-                                     │  PUT  /api/auth/profile│
-                                     │       ├─ 토큰 검증     │
-                                     │       ├─ 입력 검증     │
-                                     │       └─ 프로필 반환  │
-                                     │       (DB 업데이트 예정)│
+                                     │ + PUT  /api/auth/profile│
+                                     │   ├─ 토큰 검증        │
+                                     │   ├─ 입력 검증        │
+                                     │   └─ 프로필 반환      │
+                                     │   (DB 업데이트 예정)  │
                                      └───────────┬──────────┘
                                                  │
                     ┌───────────────────────────┼───────────────────────────┐
@@ -569,39 +594,46 @@ SajuMonooApp/
         ┌───────────▼──────────┐    ┌───────────▼──────────┐    ┌───────────▼──────────┐
         │  Helper Functions    │    │  OpenAI Service      │    │  Database (예정)     │
         │  server.js:198-285   │    │  server.js:49-69     │    │                      │
-        │                      │    │                      │    │  User Model          │
-        │  - generatePrompt()   │    │  - OpenAI 인스턴스    │    │    - _id             │
-        │    (프롬프트 생성)     │    │  - apiKey (환경변수)  │    │    - email (unique)  │
-        │  - parseAIResponse()  │    │  - chat.completions  │    │    - password (hash) │
-        │    (응답 파싱)        │    │    .create()         │    │    - name             │
-        │  - getDefaultAdvice() │    │  - model: gpt-3.5-turbo│  │    - profile {        │
-        │    (기본 조언)        │    │  - max_tokens: 500   │    │        name          │
-        │  - getDefaultTips()   │    │  - temperature: 0.7  │    │        birthDate     │
-        │    (기본 팁)          │    └──────────────────────┘    │        birthTime     │
-        └──────────────────────┘                                │        gender        │
-                                                                │      }               │
-                                                                │    - createdAt       │
-                                                                │    - updatedAt       │
+        ├──────────────────────┤    ├──────────────────────┤    ├──────────────────────┤
+        │ Methods:             │    │ Attributes:          │    │  User Model          │
+        │ - generatePrompt()   │    │ - OpenAI 인스턴스    │    ├──────────────────────┤
+        │   (프롬프트 생성)     │    │ - apiKey (환경변수)  │    │ Attributes:          │
+        │ - parseAIResponse()  │    ├──────────────────────┤    │ - _id                │
+        │   (응답 파싱)        │    │ Methods:             │    │ - email (unique)     │
+        │ - getDefaultAdvice() │    │ + chat.completions   │    │ - password (hash)    │
+        │   (기본 조언)        │    │   .create()          │    │ - name               │
+        │ - getDefaultTips()   │    │ - model: gpt-3.5-turbo│   │ - profile {          │
+        │   (기본 팁)          │    │ - max_tokens: 500    │    │     name             │
+        └──────────────────────┘    │ - temperature: 0.7   │    │     birthDate        │
+                                    └──────────────────────┘    │     birthTime        │
+                                                                │     gender           │
+                                                                │   }                  │
+                                                                │ - createdAt          │
+                                                                │ - updatedAt          │
                                                                 │                      │
-                                                                │  CompatibilityResult│
-                                                                │    - _id             │
-                                                                │    - userId (ref)    │
-                                                                │    - user1, user2    │
-                                                                │    - score           │
-                                                                │    - salAnalysis     │
-                                                                │    - createdAt       │
+                                                                │ CompatibilityResult │
+                                                                ├──────────────────────┤
+                                                                │ Attributes:          │
+                                                                │ - _id                │
+                                                                │ - userId (ref)       │
+                                                                │ - user1, user2       │
+                                                                │ - score              │
+                                                                │ - salAnalysis        │
+                                                                │ - createdAt          │
                                                                 └──────────────────────┘
                     │
         ┌───────────▼──────────┐
         │  Environment Vars   │
         │  backend/.env        │
-        │                      │
-        │  - PORT              │ → process.env.PORT (server.js:11)
-        │  - OPENAI_API_KEY    │ → process.env.OPENAI_API_KEY (server.js:36)
-        │  - DATABASE_URL (예정)│ → process.env.DATABASE_URL (향후)
-        │  - JWT_SECRET (예정) │ → process.env.JWT_SECRET (향후)
-        │                      │
-        │  dotenv.config()     │ → require('dotenv').config() (server.js:8)
+        ├──────────────────────┤
+        │ Attributes:          │
+        │ - PORT               │ → process.env.PORT (server.js:11)
+        │ - OPENAI_API_KEY     │ → process.env.OPENAI_API_KEY (server.js:36)
+        │ - DATABASE_URL (예정)│ → process.env.DATABASE_URL (향후)
+        │ - JWT_SECRET (예정)  │ → process.env.JWT_SECRET (향후)
+        ├──────────────────────┤
+        │ Methods:             │
+        │ + dotenv.config()    │ → require('dotenv').config() (server.js:8)
         └──────────────────────┘
 ```
 

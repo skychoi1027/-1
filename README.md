@@ -157,45 +157,65 @@ npm run web:clear
 SajuMonooApp/
 ├── app/                    # 화면 파일들 (Expo Router 파일 기반 라우팅)
 │   ├── (tabs)/            # 탭 네비게이션
-│   │   └── index.tsx     # 홈 화면
+│   │   ├── _layout.tsx    # 탭 레이아웃
+│   │   ├── index.tsx      # 홈 화면
+│   │   └── explore.tsx    # 탐색 화면
 │   ├── _layout.tsx        # 루트 레이아웃 (Provider 설정)
 │   ├── input.tsx          # 이용자 정보 입력 화면
 │   ├── loading.tsx        # 로딩 화면 (사주 계산 중)
-│   ├── result.tsx        # 궁합 결과 화면
-│   ├── ai-advice.tsx     # AI 조언 화면
+│   ├── result.tsx         # 궁합 결과 화면
+│   ├── ai-advice.tsx      # AI 조언 화면
 │   ├── login.tsx          # 로그인 화면
 │   ├── signup.tsx         # 회원가입 화면
 │   ├── profile.tsx        # 내 정보 화면 (프로필 설정)
-│   └── modal.tsx          # 모달 화면 (예시)
+│   └── modal.tsx          # 모달 화면
 ├── components/            # 재사용 가능한 컴포넌트
-│   ├── AppHeader.tsx     # 앱 헤더 (상단 고정, 로그인 상태 표시)
-│   ├── OctagonGraph.tsx  # 팔각형 방사형 그래프 (8개 살 시각화)
-│   ├── DatePicker.tsx    # 날짜 선택 컴포넌트 (웹/모바일 대응)
-│   ├── TimePicker.tsx    # 시간 선택 컴포넌트 (웹/모바일 대응)
-│   ├── themed-text.tsx   # 테마 적용 텍스트 컴포넌트
-│   ├── themed-view.tsx   # 테마 적용 뷰 컴포넌트
-│   └── ui/               # UI 컴포넌트
+│   ├── AppHeader.tsx      # 앱 헤더 (상단 고정, 로그인 상태 표시)
+│   ├── OctagonGraph.tsx   # 팔각형 방사형 그래프 (8개 살 시각화)
+│   ├── DatePicker.tsx     # 날짜 선택 컴포넌트 (웹/모바일 대응)
+│   ├── TimePicker.tsx     # 시간 선택 컴포넌트 (웹/모바일 대응)
+│   ├── themed-text.tsx    # 테마 적용 텍스트 컴포넌트
+│   ├── themed-view.tsx    # 테마 적용 뷰 컴포넌트
+│   └── ui/                # UI 컴포넌트
 │       ├── icon-symbol.tsx      # 플랫폼별 아이콘 컴포넌트
-│       └── icon-symbol.ios.tsx  # iOS 전용 아이콘 컴포넌트
+│       ├── icon-symbol.ios.tsx  # iOS 전용 아이콘 컴포넌트
+│       └── collapsible.tsx      # 접을 수 있는 섹션 컴포넌트
 ├── contexts/              # 전역 상태 관리 (Context API)
 │   ├── UserDataContext.tsx     # 사용자 입력 데이터 및 궁합 결과
-│   └── AuthContext.tsx         # 인증 상태 및 사용자 정보
+│   └── AuthContext.tsx          # 인증 상태 및 사용자 정보
 ├── utils/                 # 유틸리티 함수
-│   ├── sajuCalculator.ts # 사주 계산 로직 (간지 변환, 살 분석, 점수 계산)
-│   └── aiService.ts      # AI 조언 서비스 (OpenAI API 연동)
+│   ├── sajuCalculator.ts  # 사주 계산 로직 (간지 변환, 살 분석, 점수 계산)
+│   ├── aiService.ts       # AI 조언 서비스 (OpenAI API 연동)
+│   └── apiClient.ts       # 백엔드 API 호출 클라이언트 (인증 토큰 관리)
+├── backend/               # 백엔드 서버 (Node.js + Express)
+│   ├── server.js          # Express 서버 메인 파일
+│   ├── package.json       # 백엔드 의존성
+│   ├── README.md          # 백엔드 서버 설명
+│   └── .gitignore         # 백엔드 Git 무시 파일
 ├── constants/             # 상수 정의
-│   └── theme.ts          # 테마 색상 및 스타일
+│   └── theme.ts           # 테마 색상 및 스타일
 ├── hooks/                 # 커스텀 훅
-│   ├── use-color-scheme.ts    # 다크/라이트 모드 감지
-│   └── use-theme-color.ts     # 테마 색상 가져오기
+│   ├── use-color-scheme.ts      # 다크/라이트 모드 감지
+│   ├── use-color-scheme.web.ts  # 웹 전용 색상 스키마 훅
+│   └── use-theme-color.ts       # 테마 색상 가져오기
 ├── assets/                # 이미지 및 리소스
-│   └── images/           # 앱 아이콘 및 이미지
-├── scripts/               # 스크립트 파일
-│   └── reset-project.js  # 프로젝트 초기화 스크립트
-├── AI_SETUP.md           # AI 조언 기능 설정 가이드
-├── BACKEND_API_GUIDE.md  # 백엔드 API 연동 가이드
+│   └── images/            # 앱 아이콘 및 이미지
+├── scripts/                # 스크립트 파일
+│   └── reset-project.js   # 프로젝트 초기화 스크립트
+├── AI_SETUP.md            # AI 조언 기능 설정 가이드
+├── BACKEND_API_GUIDE.md   # 백엔드 API 연동 가이드
+├── BACKEND_EXPLANATION.md # 백엔드 서버 상세 설명
+├── BACKEND_SETUP.md       # 백엔드 설정 가이드
+├── CONNECTION_GUIDE.md    # 프론트엔드-백엔드 연결 가이드
+├── QUICK_START.md         # 빠른 시작 가이드
+├── FIX_POWERSHELL.md      # PowerShell 실행 정책 문제 해결
 ├── AI_ROLE_EXPLANATION.md # AI API 역할 설명
-└── README.md             # 프로젝트 설명서
+├── CALCULATION_EXPLANATION.md # 사주 계산 로직 설명
+├── CLEAR_CACHE.md         # Expo 캐시 문제 해결
+├── TODO_IMPLEMENTATION.md # 구현 예정 기능
+├── app.json               # Expo 앱 설정
+├── package.json           # 프로젝트 의존성 및 스크립트
+└── README.md              # 프로젝트 설명서
 ```
 
 ## 기능 설명

@@ -3,7 +3,7 @@
  */
 const mongoose = require('mongoose');
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://leechangbok:15798042@cluster0.k5wiwco.mongodb.net/?appName=Cluster0';
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://leechangbok:15798042@cluster0.k5wiwco.mongodb.net/sajumonoo?retryWrites=true&w=majority&appName=Cluster0';
 
 /**
  * MongoDB 연결

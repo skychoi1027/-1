@@ -49,9 +49,10 @@ const userSchema = new mongoose.Schema({
 });
 
 // 업데이트 시 updatedAt 자동 갱신
-userSchema.pre('save', function (next) {
-  this.updatedAt = Date.now();
-  next();
+userSchema.pre('save', async function () {
+  if (this.isModified() && !this.isNew) {
+    this.updatedAt = Date.now();
+  }
 });
 
 module.exports = mongoose.model('User', userSchema);

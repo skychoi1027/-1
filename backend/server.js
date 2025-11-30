@@ -228,7 +228,7 @@ app.post('/api/auth/login', async (req, res) => {
     }
 
     // 데이터베이스에서 사용자 확인
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
     if (!user) {
       return res.status(401).json({
         success: false,
@@ -277,7 +277,7 @@ app.post('/api/auth/signup', async (req, res) => {
     }
 
     // 이메일 중복 확인
-    const existingUser = await User.findOne({ email });
+    const existingUser = await User.findOne({ email: email.toLowerCase().trim() });
     if (existingUser) {
       return res.status(400).json({
         success: false,
@@ -287,9 +287,15 @@ app.post('/api/auth/signup', async (req, res) => {
 
     // 새 사용자 생성 (비밀번호는 평문 저장 - 실제로는 해시화 필요)
     const newUser = new User({
-      email,
+      email: email.toLowerCase().trim(),
       password, // TODO: bcrypt로 해시화 필요
       name: name || email.split('@')[0],
+      profile: {
+        name: '',
+        birthDate: '',
+        birthTime: '',
+        gender: '',
+      },
     });
 
     await newUser.save();
@@ -306,6 +312,7 @@ app.post('/api/auth/signup', async (req, res) => {
     });
   } catch (error) {
     console.error('회원가입 오류:', error);
+    console.error('에러 스택:', error.stack);
     res.status(500).json({
       success: false,
       message: '회원가입 중 오류가 발생했습니다.',

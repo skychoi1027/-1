@@ -7,7 +7,9 @@ import { AppHeader } from '@/components/AppHeader';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
+import { useAuth } from '@/contexts/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { authAPI } from '@/utils/apiClient';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Platform, ScrollView, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
@@ -16,12 +18,14 @@ export default function SignupScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
   const tintColor = Colors[colorScheme ?? 'light'].tint;
+  const { login } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSignup = () => {
+  const handleSignup = async () => {
     // 입력값 검증
     if (!email || !password || !confirmPassword) {
       Alert.alert('입력 오류', '모든 항목을 입력해주세요.');
@@ -47,16 +51,52 @@ export default function SignupScreen() {
       return;
     }
 
-    // TODO: 실제 회원가입 API 호출
-    console.log('회원가입 시도:', { email, password });
-    
-    // 임시: 회원가입 성공 처리
-    Alert.alert('회원가입 성공', '회원가입이 완료되었습니다.', [
-      {
-        text: '확인',
-        onPress: () => router.replace('/login'),
-      },
-    ]);
+    try {
+      setLoading(true);
+      
+      // 회원가입 API 호출
+      const USE_BACKEND_API = process.env.EXPO_PUBLIC_USE_BACKEND_API === 'true';
+      
+      if (USE_BACKEND_API) {
+        const response = await authAPI.signup(email, password);
+        
+        if (response.success) {
+          // 회원가입 성공 시 자동 로그인
+          const loginSuccess = await login(email, password);
+          
+          if (loginSuccess) {
+            Alert.alert('회원가입 성공', '회원가입이 완료되었습니다.', [
+              {
+                text: '확인',
+                onPress: () => router.replace('/(tabs)'),
+              },
+            ]);
+          } else {
+            Alert.alert('회원가입 성공', '회원가입이 완료되었습니다. 로그인해주세요.', [
+              {
+                text: '확인',
+                onPress: () => router.replace('/login'),
+              },
+            ]);
+          }
+        } else {
+          Alert.alert('회원가입 실패', response.message || '회원가입 중 오류가 발생했습니다.');
+        }
+      } else {
+        // 백엔드 미사용 시 임시 처리
+        Alert.alert('회원가입 성공', '회원가입이 완료되었습니다.', [
+          {
+            text: '확인',
+            onPress: () => router.replace('/login'),
+          },
+        ]);
+      }
+    } catch (error) {
+      console.error('회원가입 오류:', error);
+      Alert.alert('오류', '회원가입 중 오류가 발생했습니다.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -145,15 +185,18 @@ export default function SignupScreen() {
             <TouchableOpacity
               style={[
                 styles.signupButton,
-                { backgroundColor: tintColor },
+                { backgroundColor: tintColor, opacity: loading ? 0.6 : 1 },
                 Platform.select({
                   web: {
-                    cursor: 'pointer',
+                    cursor: loading ? 'not-allowed' : 'pointer',
                   },
                 }),
               ]}
-              onPress={handleSignup}>
-              <ThemedText style={styles.signupButtonText}>회원가입</ThemedText>
+              onPress={handleSignup}
+              disabled={loading}>
+              <ThemedText style={styles.signupButtonText}>
+                {loading ? '회원가입 중...' : '회원가입'}
+              </ThemedText>
             </TouchableOpacity>
 
             {/* 로그인 링크 */}

@@ -1,6 +1,6 @@
 /**
  * 궁합문어 백엔드 서버
- * Node.js + Express
+ * Node.js + Express + MongoDB
  */
 
 const express = require('express');
@@ -9,6 +9,15 @@ const { exec } = require('child_process');
 const { promisify } = require('util');
 const path = require('path');
 require('dotenv').config();
+
+// MongoDB 연결
+const { connectDatabase } = require('./config/database');
+
+// 모델 import
+const User = require('./models/User');
+const UserInput = require('./models/UserInput');
+const CompatibilityResult = require('./models/CompatibilityResult');
+const AIAdviceRequest = require('./models/AIAdviceRequest');
 
 const execAsync = promisify(exec);
 const app = express();
@@ -23,10 +32,107 @@ app.get('/', (req, res) => {
   res.json({ message: '궁합문어 백엔드 서버가 실행 중입니다.' });
 });
 
+// 궁합 결과 저장 API
+app.post('/api/compatibility-result', async (req, res) => {
+  try {
+    const { userId, userInputId, score, explanation, saju1, saju2, salAnalysis } = req.body;
+
+    // 입력값 검증
+    if (score === undefined || !explanation || !saju1 || !saju2) {
+      return res.status(400).json({
+        success: false,
+        message: '필수 데이터가 누락되었습니다.',
+      });
+    }
+
+    // 궁합 결과 저장
+    const compatibilityResult = new CompatibilityResult({
+      userId: userId || null, // TODO: JWT 토큰에서 추출
+      userInputId: userInputId || null,
+      score,
+      explanation,
+      saju1,
+      saju2,
+      salAnalysis: salAnalysis || [],
+    });
+
+    await compatibilityResult.save();
+
+    res.json({
+      success: true,
+      data: {
+        id: compatibilityResult._id.toString(),
+        score: compatibilityResult.score,
+        explanation: compatibilityResult.explanation,
+        createdAt: compatibilityResult.createdAt,
+      },
+    });
+  } catch (error) {
+    console.error('궁합 결과 저장 오류:', error);
+    res.status(500).json({
+      success: false,
+      message: '궁합 결과 저장 중 오류가 발생했습니다.',
+      error: error.message,
+    });
+  }
+});
+
+// 사용자 정보 입력 API (두 명의 정보를 백엔드에 저장)
+app.post('/api/user-input', async (req, res) => {
+  try {
+    const { userId, user1, user2 } = req.body;
+
+    // 입력값 검증
+    if (!user1 || !user2 || !user1.name || !user1.birthDate || !user1.gender ||
+        !user2.name || !user2.birthDate || !user2.gender) {
+      return res.status(400).json({
+        success: false,
+        message: '필수 정보가 누락되었습니다.',
+      });
+    }
+
+    // 사용자 정보 저장
+    const userInput = new UserInput({
+      userId: userId || null, // TODO: JWT 토큰에서 추출
+      user1: {
+        name: user1.name,
+        birthDate: user1.birthDate,
+        birthTime: user1.birthTime || '',
+        gender: user1.gender,
+      },
+      user2: {
+        name: user2.name,
+        birthDate: user2.birthDate,
+        birthTime: user2.birthTime || '',
+        gender: user2.gender,
+      },
+    });
+
+    await userInput.save();
+
+    res.json({
+      success: true,
+      data: {
+        id: userInput._id.toString(),
+        user1: userInput.user1,
+        user2: userInput.user2,
+        createdAt: userInput.createdAt,
+      },
+    });
+  } catch (error) {
+    console.error('사용자 정보 입력 오류:', error);
+    res.status(500).json({
+      success: false,
+      message: '사용자 정보 저장 중 오류가 발생했습니다.',
+      error: error.message,
+    });
+  }
+});
+
 // AI 조언 API
 app.post('/api/ai-advice', async (req, res) => {
   try {
-    const { score, explanation, salAnalysis, user1, user2, saju1, saju2 } = req.body;
+    const { userId, compatibilityResultId, score, explanation, salAnalysis, user1, user2, saju1, saju2 } = req.body;
 
     // 입력값 검증
     if (score === undefined || !explanation) {
@@ -77,6 +183,23 @@ app.post('/api/ai-advice', async (req, res) => {
     // 응답 파싱
     const parsedResponse = parseAIResponse(advice);
 
+    // AI 조언 요청 저장
+    try {
+      const aiAdviceRequest = new AIAdviceRequest({
+        userId: userId || null, // TODO: JWT 토큰에서 추출
+        compatibilityResultId: compatibilityResultId || null,
+        score,
+        explanation,
+        salAnalysis: salAnalysis || [],
+        aiAdvice: parsedResponse,
+      });
+      await aiAdviceRequest.save();
+      console.log('✅ AI 조언 요청이 데이터베이스에 저장되었습니다.');
+    } catch (dbError) {
+      console.error('AI 조언 요청 저장 오류:', dbError);
+      // 저장 실패해도 응답은 반환
+    }
+
     res.json({
       success: true,
       data: parsedResponse,
@@ -91,13 +214,12 @@ app.post('/api/ai-advice', async (req, res) => {
   }
 });
 
-// 인증 API (예시)
+// 인증 API
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // TODO: 실제 데이터베이스에서 사용자 확인
-    // 예시: 간단한 체크
+    // 입력값 검증
     if (!email || !password) {
       return res.status(400).json({
         success: false,
@@ -105,15 +227,31 @@ app.post('/api/auth/login', async (req, res) => {
       });
     }
 
-    // TODO: 실제 인증 로직 구현
-    // 예시: 임시로 성공 처리
+    // 데이터베이스에서 사용자 확인
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: '이메일 또는 비밀번호가 올바르지 않습니다.',
+      });
+    }
+
+    // 비밀번호 확인 (TODO: bcrypt로 해시 비교 필요)
+    if (user.password !== password) {
+      return res.status(401).json({
+        success: false,
+        message: '이메일 또는 비밀번호가 올바르지 않습니다.',
+      });
+    }
+
     res.json({
       success: true,
-      token: 'jwt-token-here', // 실제로는 JWT 토큰 생성
+      token: `token-${user._id}`, // TODO: JWT 토큰 생성 필요
       user: {
-        id: 'user-1',
-        email,
-        name: email.split('@')[0],
+        id: user._id.toString(),
+        email: user.email,
+        name: user.name,
+        profile: user.profile,
       },
     });
   } catch (error) {
@@ -121,6 +259,7 @@ app.post('/api/auth/login', async (req, res) => {
     res.status(500).json({
       success: false,
       message: '로그인 중 오류가 발생했습니다.',
+      error: error.message,
     });
   }
 });
@@ -129,15 +268,40 @@ app.post('/api/auth/signup', async (req, res) => {
   try {
     const { email, password, name } = req.body;
 
-    // TODO: 실제 데이터베이스에 사용자 저장
-    // 예시: 임시로 성공 처리
+    // 입력값 검증
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: '이메일과 비밀번호를 입력해주세요.',
+      });
+    }
+
+    // 이메일 중복 확인
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: '이미 등록된 이메일입니다.',
+      });
+    }
+
+    // 새 사용자 생성 (비밀번호는 평문 저장 - 실제로는 해시화 필요)
+    const newUser = new User({
+      email,
+      password, // TODO: bcrypt로 해시화 필요
+      name: name || email.split('@')[0],
+    });
+
+    await newUser.save();
+
     res.json({
       success: true,
-      token: 'jwt-token-here',
+      token: `token-${newUser._id}`, // TODO: JWT 토큰 생성 필요
       user: {
-        id: 'user-1',
-        email,
-        name: name || email.split('@')[0],
+        id: newUser._id.toString(),
+        email: newUser.email,
+        name: newUser.name,
+        profile: newUser.profile,
       },
     });
   } catch (error) {
@@ -145,20 +309,37 @@ app.post('/api/auth/signup', async (req, res) => {
     res.status(500).json({
       success: false,
       message: '회원가입 중 오류가 발생했습니다.',
+      error: error.message,
     });
   }
 });
 
 app.get('/api/auth/profile', async (req, res) => {
   try {
-    // TODO: 실제 인증 토큰 확인
-    // TODO: 실제 데이터베이스에서 프로필 조회
+    const userId = req.headers['x-user-id']; // TODO: JWT 토큰에서 추출 필요
+
+    // 임시: userId가 없으면 첫 번째 사용자 사용 (개발용)
+    let user;
+    if (userId) {
+      user = await User.findById(userId);
+    } else {
+      user = await User.findOne();
+    }
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: '사용자를 찾을 수 없습니다.',
+      });
+    }
+
     res.json({
       success: true,
       user: {
-        id: 'user-1',
-        email: 'user@example.com',
-        name: '사용자',
+        id: user._id.toString(),
+        email: user.email,
+        name: user.name,
+        profile: user.profile,
       },
     });
   } catch (error) {
@@ -166,6 +347,7 @@ app.get('/api/auth/profile', async (req, res) => {
     res.status(500).json({
       success: false,
       message: '프로필 조회 중 오류가 발생했습니다.',
+      error: error.message,
     });
   }
 });
@@ -173,21 +355,40 @@ app.get('/api/auth/profile', async (req, res) => {
 app.put('/api/auth/profile', async (req, res) => {
   try {
     const { name, birthDate, birthTime, gender } = req.body;
+    const userId = req.headers['x-user-id']; // TODO: JWT 토큰에서 추출 필요
 
-    // TODO: 실제 인증 토큰 확인
-    // TODO: 실제 데이터베이스에 프로필 업데이트
+    // 임시: userId가 없으면 첫 번째 사용자 사용 (개발용)
+    let user;
+    if (userId) {
+      user = await User.findById(userId);
+    } else {
+      user = await User.findOne();
+    }
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: '사용자를 찾을 수 없습니다.',
+      });
+    }
+
+    // 프로필 업데이트
+    user.profile = {
+      name: name || user.profile?.name || '',
+      birthDate: birthDate || user.profile?.birthDate || '',
+      birthTime: birthTime || user.profile?.birthTime || '',
+      gender: gender || user.profile?.gender || '',
+    };
+
+    await user.save();
+
     res.json({
       success: true,
       user: {
-        id: 'user-1',
-        email: 'user@example.com',
-        name,
-        profile: {
-          name,
-          birthDate,
-          birthTime,
-          gender,
-        },
+        id: user._id.toString(),
+        email: user.email,
+        name: user.name,
+        profile: user.profile,
       },
     });
   } catch (error) {
@@ -195,6 +396,7 @@ app.put('/api/auth/profile', async (req, res) => {
     res.status(500).json({
       success: false,
       message: '프로필 업데이트 중 오류가 발생했습니다.',
+      error: error.message,
     });
   }
 });
@@ -262,6 +464,10 @@ app.post('/api/calculate-compatibility', async (req, res) => {
         });
       }
 
+      // 궁합 결과 저장 (추가 정보가 있는 경우)
+      // 주의: 이 API는 Python 스크립트 결과만 반환하므로, 
+      // 실제 사주 정보와 사용자 정보는 프론트엔드에서 별도로 저장 API를 호출해야 함
+      
       // 성공 응답
       res.json({
         success: true,
@@ -382,9 +588,23 @@ function getDefaultTips(score) {
 }
 
 // 서버 시작
-app.listen(PORT, () => {
-  console.log(`🚀 백엔드 서버가 http://localhost:${PORT} 에서 실행 중입니다.`);
-  console.log(`📝 환경 변수 확인:`);
-  console.log(`   - OPENAI_API_KEY: ${process.env.OPENAI_API_KEY ? '설정됨' : '설정 안 됨 (기본 조언 사용)'}`);
-});
+async function startServer() {
+  try {
+    // MongoDB 연결
+    await connectDatabase();
+    
+    // 서버 시작
+    app.listen(PORT, () => {
+      console.log(`🚀 백엔드 서버가 http://localhost:${PORT} 에서 실행 중입니다.`);
+      console.log(`📝 환경 변수 확인:`);
+      console.log(`   - OPENAI_API_KEY: ${process.env.OPENAI_API_KEY ? '설정됨' : '설정 안 됨 (기본 조언 사용)'}`);
+      console.log(`   - MONGODB_URI: ${process.env.MONGODB_URI ? '설정됨' : '기본값 사용'}`);
+    });
+  } catch (error) {
+    console.error('서버 시작 실패:', error);
+    process.exit(1);
+  }
+}
+
+startServer();
 

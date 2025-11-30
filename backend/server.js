@@ -132,7 +132,9 @@ app.post('/api/user-input', async (req, res) => {
 // AI 조언 API
 app.post('/api/ai-advice', async (req, res) => {
   try {
-    const { userId, compatibilityResultId, score, explanation, salAnalysis, user1, user2, saju1, saju2 } = req.body;
+    // userId는 헤더 또는 body에서 가져오기
+    const userId = req.headers['x-user-id'] || req.body.userId || null;
+    const { compatibilityResultId, score, explanation, salAnalysis, user1, user2, saju1, saju2 } = req.body;
 
     // 입력값 검증
     if (score === undefined || !explanation) {
@@ -157,53 +159,74 @@ app.post('/api/ai-advice', async (req, res) => {
     }
 
     // OpenAI API 호출
-    const { OpenAI } = require('openai');
-    const openai = new OpenAI({ apiKey: openaiApiKey });
-
-    const prompt = generatePrompt({ score, explanation, salAnalysis, user1, user2 });
-
-    const response = await openai.chat.completions.create({
-      model: 'gpt-3.5-turbo',
-      messages: [
-        {
-          role: 'system',
-          content: '당신은 사주 팔자 전문가입니다. 궁합 결과를 분석하여 실용적이고 긍정적인 조언을 제공합니다.',
-        },
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
-      max_tokens: 500,
-      temperature: 0.7,
-    });
-
-    const advice = response.choices[0]?.message?.content || '';
-
-    // 응답 파싱
-    const parsedResponse = parseAIResponse(advice);
-
-    // AI 조언 요청 저장
     try {
-      const aiAdviceRequest = new AIAdviceRequest({
-        userId: userId || null, // TODO: JWT 토큰에서 추출
-        compatibilityResultId: compatibilityResultId || null,
-        score,
-        explanation,
-        salAnalysis: salAnalysis || [],
-        aiAdvice: parsedResponse,
-      });
-      await aiAdviceRequest.save();
-      console.log('✅ AI 조언 요청이 데이터베이스에 저장되었습니다.');
-    } catch (dbError) {
-      console.error('AI 조언 요청 저장 오류:', dbError);
-      // 저장 실패해도 응답은 반환
-    }
+      const { OpenAI } = require('openai');
+      const openai = new OpenAI({ apiKey: openaiApiKey });
 
-    res.json({
-      success: true,
-      data: parsedResponse,
-    });
+      const prompt = generatePrompt({ score, explanation, salAnalysis, user1, user2 });
+
+      console.log('🤖 OpenAI API 호출 시작...');
+      const response = await openai.chat.completions.create({
+        model: 'gpt-3.5-turbo',
+        messages: [
+          {
+            role: 'system',
+            content: '당신은 사주 팔자 전문가입니다. 궁합 결과를 분석하여 실용적이고 긍정적인 조언을 제공합니다.',
+          },
+          {
+            role: 'user',
+            content: prompt,
+          },
+        ],
+        max_tokens: 500,
+        temperature: 0.7,
+      });
+
+      const advice = response.choices[0]?.message?.content || '';
+      console.log('✅ OpenAI API 호출 성공');
+
+      // 응답 파싱
+      const parsedResponse = parseAIResponse(advice);
+
+      // AI 조언 요청 저장
+      try {
+        const aiAdviceRequest = new AIAdviceRequest({
+          userId: userId || null, // TODO: JWT 토큰에서 추출
+          compatibilityResultId: compatibilityResultId || null,
+          score,
+          explanation,
+          salAnalysis: salAnalysis || [],
+          aiAdvice: parsedResponse,
+        });
+        await aiAdviceRequest.save();
+        console.log('✅ AI 조언 요청이 데이터베이스에 저장되었습니다.');
+      } catch (dbError) {
+        console.error('AI 조언 요청 저장 오류:', dbError);
+        // 저장 실패해도 응답은 반환
+      }
+
+      res.json({
+        success: true,
+        data: parsedResponse,
+      });
+    } catch (openaiError) {
+      console.error('❌ OpenAI API 호출 실패:', openaiError.message);
+      console.error('   오류 상세:', openaiError);
+      
+      // 429 오류 (할당량 초과) 또는 기타 오류 시 기본 조언 반환
+      if (openaiError.status === 429) {
+        console.error('⚠️ OpenAI API 할당량 초과 또는 결제 정보 확인 필요');
+      }
+      
+      return res.json({
+        success: true,
+        data: {
+          advice: getDefaultAdvice(score, explanation, salAnalysis),
+          tips: getDefaultTips(score),
+          summary: `궁합 점수 ${score}점입니다.`,
+        },
+      });
+    }
   } catch (error) {
     console.error('AI 조언 생성 오류:', error);
     res.status(500).json({
@@ -457,12 +480,23 @@ app.post('/api/calculate-compatibility', async (req, res) => {
         shell: true, // Windows에서도 동작하도록
       });
 
+      // stderr에 오류가 있으면 로그 출력
       if (stderr && !stderr.includes('WARNING')) {
-        console.error('Python 스크립트 오류:', stderr);
+        console.error('⚠️ Python 스크립트 경고:', stderr);
       }
 
-      // Python 출력 파싱
-      const result = JSON.parse(stdout.trim());
+      // stdout이 비어있거나 JSON 파싱 실패 시 오류 처리
+      if (!stdout || !stdout.trim()) {
+        throw new Error('Python 스크립트가 출력을 생성하지 않았습니다.');
+      }
+
+      let result;
+      try {
+        result = JSON.parse(stdout.trim());
+      } catch (parseError) {
+        console.error('❌ Python 출력 파싱 실패:', stdout);
+        throw new Error(`Python 출력 파싱 실패: ${parseError.message}`);
+      }
 
       if (!result.success) {
         return res.status(500).json({
@@ -481,9 +515,11 @@ app.post('/api/calculate-compatibility', async (req, res) => {
         data: result.data,
       });
     } catch (execError) {
-      console.error('Python 실행 오류:', execError);
+      console.error('❌ Python 실행 오류:', execError.message);
+      console.error('   상세 오류:', execError);
       
       // Python이 설치되지 않았거나 모델 파일이 없는 경우 기본값 반환
+      // 하지만 오류 정보를 포함하여 반환
       return res.json({
         success: true,
         data: {
@@ -492,6 +528,7 @@ app.post('/api/calculate-compatibility', async (req, res) => {
           sal0: [0, 0, 0, 0, 0, 0, 0, 0],
           sal1: [0, 0, 0, 0, 0, 0, 0, 0],
           fallback: true, // 기본값 사용 표시
+          error: execError.message, // 오류 메시지 포함
         },
       });
     }

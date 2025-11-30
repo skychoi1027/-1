@@ -87,17 +87,46 @@ export async function getAIAdvice(
 
   if (useBackendAPI) {
     try {
+      // 인증 토큰 가져오기
+      let authToken: string | null = null;
+      let userId: string | null = null;
+      
+      try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          authToken = window.localStorage.getItem('authToken');
+          // userId는 토큰에서 추출하거나 별도로 저장된 값 사용
+          // 현재는 토큰 형식이 'token-{userId}'이므로 추출
+          if (authToken && authToken.startsWith('token-')) {
+            userId = authToken.replace('token-', '');
+          }
+        }
+      } catch (e) {
+        console.log('localStorage not available');
+      }
+
       // 백엔드 API 엔드포인트 호출
       // 예: POST /api/ai-advice
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+      
+      // 인증 토큰이 있으면 헤더에 추가
+      if (authToken) {
+        headers['Authorization'] = `Bearer ${authToken}`;
+      }
+      
+      // userId가 있으면 헤더에 추가 (백엔드에서 x-user-id 헤더 사용)
+      if (userId) {
+        headers['x-user-id'] = userId;
+      }
+
       const response = await fetch(`${backendApiUrl}/api/ai-advice`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          // 인증이 필요한 경우 (예: JWT 토큰)
-          // 'Authorization': `Bearer ${authToken}`,
-        },
+        headers,
         body: JSON.stringify({
           // 궁합 결과 데이터 전송
+          userId: userId || null,
+          compatibilityResultId: (request as any).compatibilityResultId || null, // 옵셔널
           score: request.score,
           explanation: request.explanation,
           salAnalysis: request.salAnalysis,

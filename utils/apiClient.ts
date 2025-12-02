@@ -224,42 +224,68 @@ export const aiAPI = {
  * 궁합 계산 API
  */
 export const compatibilityAPI = {
-  /**
-   * 사주 궁합 계산 (TensorFlow 모델 사용 - Render 서버로 연결됨)
-   * ⚠️ [중요 변경] Python 서버가 'token0', 'token1' 키를 사용하므로
-   * 여기서 변수명을 매핑해서 보내주어야 합니다.
-   */
   async calculateCompatibility(request: {
-    person0: number[]; // 프론트엔드에서 사용하는 이름
+    person0: number[];
     person1: number[];
     gender0: number;
     gender1: number;
   }) {
-    // Render Python 서버에 맞는 데이터 구조로 변환
-    const pythonPayload = {
-      token0: request.person0, // person0 -> token0 매핑
-      token1: request.person1, // person1 -> token1 매핑
-      gender0: request.gender0,
-      gender1: request.gender1
-    };
+    // 👇 [여기에 본인의 렌더 주소를 넣으세요] 
+    // 주소 끝에 /predict 를 꼭 붙여야 합니다!
+    const RENDER_URL = "https://saju-server-abcd.onrender.com/predict";
 
-    return apiRequest<{
-      // Python 서버 응답 구조 (score, sal0, sal1 등)
-      score?: number;
-      sal0?: number[];
-      sal1?: number[];
+    console.log("🚀 [Direct] Render 서버로 요청을 보냅니다:", RENDER_URL);
+
+    try {
+      // apiRequest 함수를 거치지 않고, 직접 fetch를 사용하여 렌더 서버로 쏩니다.
+      const response = await fetch(RENDER_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        // Python 서버가 원하는 이름(token0)으로 바꿔서 보냅니다.
+        body: JSON.stringify({
+          token0: request.person0,
+          token1: request.person1,
+          gender0: request.gender0,
+          gender1: request.gender1
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Render Server Error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log("✅ Render 서버 응답 성공:", data);
+
+      return {
+        success: true,
+        data: {
+            finalScore: data.score,    // Python은 score로 줌
+            originalScore: data.score,
+            sal0: data.sal0,
+            sal1: data.sal1
+        }
+      };
       
-      // 기존 호환성 유지용 (혹시 모를 필드)
-      success?: boolean;
-      data?: any;
-      message?: string;
-      error?: string;
-    }>('/api/calculate-compatibility', { // URL은 apiRequest에서 가로채서 변경됨
-      method: 'POST',
-      body: JSON.stringify(pythonPayload), // 변환된 페이로드 전송
-    });
+    } catch (error) {
+      console.error("❌ Render 서버 연결 실패:", error);
+      // 에러 발생 시 기본값 반환 (앱 죽음 방지)
+      return {
+        success: false,
+        message: "계산 서버 연결 실패",
+        data: {
+            finalScore: 50,
+            originalScore: 50,
+            sal0: [0,0,0,0,0,0,0,0],
+            sal1: [0,0,0,0,0,0,0,0]
+        }
+      };
+    }
   },
 };
+
 
 /**
  * AI 채팅 API

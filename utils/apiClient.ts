@@ -230,59 +230,28 @@ export const compatibilityAPI = {
     gender0: number;
     gender1: number;
   }) {
-    // 👇 [여기에 본인의 렌더 주소를 넣으세요] 
-    // 주소 끝에 /predict 를 꼭 붙여야 합니다!
-    const RENDER_URL = "https://saju-calcurator-server.onrender.com/predict";
-
-    console.log("🚀 [Direct] Render 서버로 요청을 보냅니다:", RENDER_URL);
-
-    try {
-      // apiRequest 함수를 거치지 않고, 직접 fetch를 사용하여 렌더 서버로 쏩니다.
-      const response = await fetch(RENDER_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        // Python 서버가 원하는 이름(token0)으로 바꿔서 보냅니다.
-        body: JSON.stringify({
-          token0: request.person0,
-          token1: request.person1,
-          gender0: request.gender0,
-          gender1: request.gender1
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Render Server Error: ${response.status}`);
-      }
-
-      const data = await response.json();
-      console.log("✅ Render 서버 응답 성공:", data);
-
-      return {
-        success: true,
-        data: {
-            finalScore: data.score,    // Python은 score로 줌
-            originalScore: data.score,
-            sal0: data.sal0,
-            sal1: data.sal1
-        }
+    // 백엔드 API 사용 (Node.js 서버의 /api/calculate-compatibility 엔드포인트)
+    return apiRequest<{
+      success: boolean;
+      data?: {
+        originalScore: number;
+        finalScore: number;
+        sal0: number[];
+        sal1: number[];
+        fallback?: boolean;
+        error?: string;
       };
-      
-    } catch (error) {
-      console.error("❌ Render 서버 연결 실패:", error);
-      // 에러 발생 시 기본값 반환 (앱 죽음 방지)
-      return {
-        success: false,
-        message: "계산 서버 연결 실패",
-        data: {
-            finalScore: 50,
-            originalScore: 50,
-            sal0: [0,0,0,0,0,0,0,0],
-            sal1: [0,0,0,0,0,0,0,0]
-        }
-      };
-    }
+      message?: string;
+      error?: string;
+    }>('/api/calculate-compatibility', {
+      method: 'POST',
+      body: JSON.stringify({
+        person0: request.person0,
+        person1: request.person1,
+        gender0: request.gender0,
+        gender1: request.gender1,
+      }),
+    });
   },
 };
 

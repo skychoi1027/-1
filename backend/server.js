@@ -38,10 +38,6 @@ app.get('/', (req, res) => {
 // Python 환경 체크 API (배포 환경 디버깅용)
 app.get('/api/check-python-env', async (req, res) => {
   try {
-    const isWindows = process.platform === 'win32';
-    const pythonCommand = isWindows ? 'python' : 'python3';
-    const pythonScriptPath = path.join(__dirname, 'calculate.py');
-    
     const checks = {
       platform: process.platform,
       pythonCommand: pythonCommand,
@@ -672,10 +668,10 @@ app.post('/api/calculate-compatibility', async (req, res) => {
       });
     }
 
-    // Python 스크립트에 전달할 데이터 준비
+    // Python 스크립트에 전달할 데이터 준비 (token0/token1 형식으로 변환)
     const inputData = {
-      person0: person0, // [년간, 년지, 월간, 월지, 일간, 일지]
-      person1: person1,
+      token0: person0, // [년간, 년지, 월간, 월지, 일간, 일지]
+      token1: person1,
       gender0: gender0 === '남자' || gender0 === 'male' || gender0 === 1 ? 1 : 0,
       gender1: gender1 === '남자' || gender1 === 'male' || gender1 === 1 ? 1 : 0,
     };
@@ -683,22 +679,13 @@ app.post('/api/calculate-compatibility', async (req, res) => {
     // 디버깅: 입력 데이터 로그
     console.log('🔍 Python 스크립트 입력 데이터:', JSON.stringify(inputData, null, 2));
 
-    // Python 스크립트 경로
-    const pythonScriptPath = path.join(__dirname, 'calculate.py');
-    
-    // Windows와 Linux/Mac 모두 지원
-    const isWindows = process.platform === 'win32';
-    const pythonCommand = isWindows ? 'python' : 'python3';
-    
-    // Python 스크립트 실행
+    // Python 스크립트 실행 (stdin 방식)
     try {
-      // JSON 데이터를 임시 파일로 저장하여 전달 (Windows echo 문제 해결)
+      // JSON 데이터를 임시 파일로 저장하여 stdin으로 전달
       const tmpFilePath = path.join(os.tmpdir(), `calculate-input-${Date.now()}.json`);
-      
-      // 임시 파일에 JSON 데이터 저장
       fs.writeFileSync(tmpFilePath, JSON.stringify(inputData), 'utf8');
       
-      // Python 스크립트 실행 (stdin으로 파일 내용 전달)
+      // stdin으로 파일 내용 전달
       const command = isWindows
         ? `type "${tmpFilePath}" | ${pythonCommand} "${pythonScriptPath}"`
         : `cat "${tmpFilePath}" | ${pythonCommand} "${pythonScriptPath}"`;
@@ -741,7 +728,8 @@ app.post('/api/calculate-compatibility', async (req, res) => {
         throw new Error(`Python 출력 파싱 실패: ${parseError.message}`);
       }
 
-      if (!result.success) {
+      // 새로운 출력 형식 확인: {score, sal0, sal1} 또는 {error, score, sal0, sal1}
+      if (result.error) {
         return res.status(500).json({
           success: false,
           message: result.error || '계산 중 오류가 발생했습니다.',
@@ -749,8 +737,8 @@ app.post('/api/calculate-compatibility', async (req, res) => {
       }
 
       // 살 값 확인 및 경고
-      const sal0 = result.data?.sal0 || [];
-      const sal1 = result.data?.sal1 || [];
+      const sal0 = result.sal0 || [];
+      const sal1 = result.sal1 || [];
       const sal0Sum = sal0.reduce((a, b) => a + b, 0);
       const sal1Sum = sal1.reduce((a, b) => a + b, 0);
       
@@ -759,14 +747,22 @@ app.post('/api/calculate-compatibility', async (req, res) => {
         console.warn(`   입력 데이터: person0=${JSON.stringify(person0)}, person1=${JSON.stringify(person1)}, gender0=${gender0}, gender1=${gender1}`);
       }
 
+      // 새로운 출력 형식에 맞게 변환 (기존 프론트엔드 호환성 유지)
+      const finalScore = result.score || 0;
+      
       // 궁합 결과 저장 (추가 정보가 있는 경우)
       // 주의: 이 API는 Python 스크립트 결과만 반환하므로, 
       // 실제 사주 정보와 사용자 정보는 프론트엔드에서 별도로 저장 API를 호출해야 함
       
-      // 성공 응답
+      // 성공 응답 (기존 형식 유지)
       res.json({
         success: true,
-        data: result.data,
+        data: {
+          originalScore: finalScore,
+          finalScore: finalScore,
+          sal0: sal0,
+          sal1: sal1,
+        },
       });
     } catch (execError) {
       console.error('❌ Python 실행 오류:', execError.message);

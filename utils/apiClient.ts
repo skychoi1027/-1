@@ -232,7 +232,7 @@ export const compatibilityAPI = {
   }) {
     // 👇 [여기에 본인의 렌더 주소를 넣으세요] 
     // 주소 끝에 /predict 를 꼭 붙여야 합니다!
-    const RENDER_URL = "https://saju-server-abcd.onrender.com/predict";
+    const RENDER_URL = "https://saju-server.onrender.com/predict";
 
     console.log("🚀 [Direct] Render 서버로 요청을 보냅니다:", RENDER_URL);
 
